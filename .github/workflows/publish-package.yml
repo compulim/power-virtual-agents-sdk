@@ -18,7 +18,7 @@ concurrency: publish-package/${{ inputs.package-name }}
 
 env:
   node-version: lts/Hydrogen
-  use-secure-feed: false # TODO: Temporary set to false during development.
+  use-secure-feed: true # TODO: Temporary set to false during development.
 
 # Notes:
 # - CyberEO: During production build, we must not install packages from npmjs.com.
