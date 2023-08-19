@@ -1,6 +1,6 @@
 {
   "name": "powerva-turn-based-chat-adapter-framework",
-  "version": "0.0.0-0",
+  "version": "0.0.1-0",
   "description": "Framework for building a turn-based chat adapter for using Power Virtual Agents chatbots.",
   "author": "Microsoft Corporation",
   "homepage": "https://github.com/microsoft/power-virtual-agents-sdk/",
