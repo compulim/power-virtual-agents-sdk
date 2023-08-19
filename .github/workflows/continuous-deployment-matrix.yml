@@ -95,10 +95,16 @@ jobs:
         name: Build matrix
         run: |
           cat workspaces.json | jq -r 'map(.name) | { "package-name": . }' > /tmp/matrix.json
-          echo matrix=`cat /tmp/matrix.json | jq -cr` >> $GITHUB_OUTPUT
+          echo matrix=`cat /tmp/matrix.json | jq -cr` | tee --append $GITHUB_OUTPUT
 
           cat workspaces.json | jq -r 'map(select(.private | not)) | map(.name) | { "package-name": . }' > /tmp/matrix-public-only.json
-          echo matrix-public-only=`cat /tmp/matrix-public-only.json | jq -cr` >> $GITHUB_OUTPUT
+          echo matrix-public-only=`cat /tmp/matrix-public-only.json | jq -cr` | tee --append $GITHUB_OUTPUT
+      - name: Print workflow control file
+        uses: ./.github/actions/print-step-summary-from-file
+        with:
+          path: ./workspaces.json
+          title: Workflow control file
+          type: json
       - name: Print all packages
         uses: ./.github/actions/print-step-summary-from-file
         with:
@@ -131,7 +137,7 @@ jobs:
         name: Set up secure feed
         run: npx https://aka.ms/EnableSecureFeed
         shell: bash
-      - name: Download workspaces file
+      - name: Download workflow control file
         uses: actions/download-artifact@v3
         with:
           name: workspaces
@@ -146,16 +152,12 @@ jobs:
         run: npm pack --json --pack-destination=$PWD --workspaces=true > /tmp/pack-result.json
       - name: Update workspaces file with tarball
         run: |
-          cat workspaces.json | jq --argfile pack /tmp/pack-result.json -rS 'with_entries(.key as $name | . + (.value += { tarball: $pack | map(select(.name == $name))[0].filename }))' > /tmp/workspaces.json
+          cat workspaces.json | jq --argfile pack /tmp/pack-result.json -rS 'with_entries(.key as $name | . + (.value += { tarball: $pack | map(select(.name == $name))[0].filename }))' | tee /tmp/workspaces.json
           mv /tmp/workspaces.json workspaces.json
-
-          cat workspaces.json
       - name: Update workspaces file with version
         run: |
-          cat workspaces.json | jq --argfile pack /tmp/pack-result.json -rS 'with_entries(.key as $name | . + (.value += { version: $pack | map(select(.name == $name))[0].version }))' > /tmp/workspaces.json
+          cat workspaces.json | jq --argfile pack /tmp/pack-result.json -rS 'with_entries(.key as $name | . + (.value += { version: $pack | map(select(.name == $name))[0].version }))' | tee /tmp/workspaces.json
           mv /tmp/workspaces.json workspaces.json
-
-          cat workspaces.json
       - name: Upload package-lock.json
         uses: actions/upload-artifact@v3
         with:
@@ -184,7 +186,7 @@ jobs:
       - build
     runs-on: ubuntu-latest
     steps:
-      - name: Download workspaces file
+      - name: Download workflow control file
         uses: actions/download-artifact@v3
         with:
           name: workspaces
@@ -196,9 +198,7 @@ jobs:
         name: Get tarball name
         run: |
           TARBALL=`cat workspaces.json | jq -r '.pages.tarball | if . then . else halt_error(1) end'` && true || exit 1
-
-          echo Tarball at $TARBALL.
-          echo tarball=$TARBALL >> $GITHUB_OUTPUT
+          echo tarball=$TARBALL | tee --append $GITHUB_OUTPUT
       - name: Extract ${{ steps.get-tarball-name.outputs.tarball }}
         run: |
           mkdir ./_site/
@@ -216,7 +216,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix-public-only) }}
     steps:
-      - name: Download workspaces file
+      - name: Download workflow control file
         uses: actions/download-artifact@v3
         with:
           name: workspaces
@@ -228,7 +228,7 @@ jobs:
         name: Prepare
         run: |
           cat workspaces.json
-          echo tarball=`cat workspaces.json | jq --arg name ${{ matrix.package-name }} -r '.[$name] | .tarball'` >> $GITHUB_OUTPUT
+          echo tarball=`cat workspaces.json | jq --arg name ${{ matrix.package-name }} -r '.[$name] | .tarball'` | tee --append $GITHUB_OUTPUT
       - name: Extract package
         run: |
           ls -l ${{ steps.prepare.outputs.tarball }}
@@ -238,14 +238,12 @@ jobs:
       - id: rescope
         name: Rescope
         run: |
-          cat package.json | jq --argfile versions ../workspaces.json -r '. | (.name = "@${{ github.repository_owner }}/" + .name) | (.dependencies |= (. | with_entries(if ({ (.key): {} } | inside($versions)) then . | (.value = "npm:@${{ github.repository_owner }}/" + .key + "@" + .value) else . end))) | (.devDependencies |= (. | with_entries(if ({ (.key): {} } | inside($versions)) then . | (.value = "npm:@${{ github.repository_owner }}/" + .key + "@" + .value) else . end)))' > package.tmp.json
-          mv package.tmp.json package.json
-
-          cat package.json
+          cat package.json | jq --argfile versions ../workspaces.json -r '. | (.name = "@${{ github.repository_owner }}/" + .name) | (.dependencies |= (. | with_entries(if ({ (.key): {} } | inside($versions)) then . | (.value = "npm:@${{ github.repository_owner }}/" + .key + "@" + .value) else . end))) | (.devDependencies |= (. | with_entries(if ({ (.key): {} } | inside($versions)) then . | (.value = "npm:@${{ github.repository_owner }}/" + .key + "@" + .value) else . end)))' | tee /tmp/package.json
+          mv /tmp/package.json package.json
         working-directory: ./package
       - name: Repack
         run: |
-          TARBALL=`npm pack --ignore-scripts --json | jq -r '.[0].filename'`
+          TARBALL=`npm pack --ignore-scripts --json | jq -r '.[0].filename'` && true || exit 1
           mv $TARBALL ../${{ steps.prepare.outputs.tarball }}
         working-directory: ./package
       - name: Upload scoped package
@@ -257,7 +255,6 @@ jobs:
   approval:
     name: Approval
     needs:
-      # TODO: Can we use `build*` here?
       - build
       - build-github-packages
       - build-github-pages
@@ -274,7 +271,7 @@ jobs:
       contents: write # "contents" is required for modifying releases.
     runs-on: ubuntu-latest
     steps:
-      - name: Download workspaces file
+      - name: Download workflow control file
         uses: actions/download-artifact@v3
         with:
           name: workspaces
@@ -294,7 +291,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix-public-only) }}
     steps:
-      - name: Download workspaces file
+      - name: Download workflow control file
         uses: actions/download-artifact@v3
         with:
           name: workspaces
@@ -304,7 +301,7 @@ jobs:
           name: packages
       - id: prepare
         name: Prepare
-        run: echo tarball=`cat workspaces.json | jq --arg name ${{ matrix.package-name }} -r '.[$name] | .tarball | ltrimstr("./")'` >> $GITHUB_OUTPUT
+        run: echo tarball=`cat workspaces.json | jq --arg name ${{ matrix.package-name }} -r '.[$name] | .tarball | ltrimstr("./")'` | tee --append $GITHUB_OUTPUT
       - env:
           GH_TOKEN: ${{ github.token }}
         name: Get current assets
@@ -314,7 +311,7 @@ jobs:
       - id: check-existence
         name: Check if asset already present
         run: |
-          echo exist=`cat assets.json | jq --arg name ${{ steps.prepare.outputs.tarball }} '.assets | any(select(.name == $name))'` >> $GITHUB_OUTPUT
+          echo exist=`cat assets.json | jq --arg name ${{ steps.prepare.outputs.tarball }} '.assets | any(select(.name == $name))'` | tee --append $GITHUB_OUTPUT
 
           if [[ exist == 'false' ]]
           then
@@ -377,8 +374,8 @@ jobs:
       - id: prepare
         name: Prepare
         run: |
-          echo tag-url=${{ github.server_url }}/${{ github.repository }}/tree/${{ env.publish-tag }} >> $GITHUB_OUTPUT
-          echo url=${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.publish-tag }} >> $GITHUB_OUTPUT
+          echo tag-url=${{ github.server_url }}/${{ github.repository }}/tree/${{ env.publish-tag }} | tee --append $GITHUB_OUTPUT
+          echo url=${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.publish-tag }} | tee --append $GITHUB_OUTPUT
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all tags.
@@ -431,7 +428,7 @@ jobs:
     strategy:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix-public-only) }}
     steps:
-      - name: Download workspaces file
+      - name: Download workflow control file
         uses: actions/download-artifact@v3
         with:
           name: workspaces
@@ -443,28 +440,29 @@ jobs:
         name: Prepare
         run: |
           TARBALL=`cat workspaces.json | jq --arg name ${{ matrix.package-name }} -r '.[$name] | .tarball'`
+          VERSION=`tar -xf $TARBALL --to-stdout package/package.json | jq -r '.version'`
 
-          echo package-id=`tar -xf $TARBALL --to-stdout package/package.json | jq -r '.name + "@" + .version'` >> $GITHUB_OUTPUT
-          echo tarball=$TARBALL >> $GITHUB_OUTPUT
+          echo package-id=${{ matrix.package-name }}@$VERSION | tee --append $GITHUB_OUTPUT
+          echo tarball=$TARBALL | tee --append $GITHUB_OUTPUT
+          echo version=$VERSION | tee --append $GITHUB_OUTPUT
 
           # url=https://github.com/compulim/power-virtual-agents-sdk/pkgs/npm/powerva-chat-adapter
-          echo url=${{ github.server_url }}/${{ github.repository }}/pkgs/npm/${{ matrix.package-name }} >> $GITHUB_OUTPUT
+          echo url=${{ github.server_url }}/${{ github.repository }}/pkgs/npm/${{ matrix.package-name }} | tee --append $GITHUB_OUTPUT
       - name: Set up Node.js ${{ inputs.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node-version }}
           registry-url: https://npm.pkg.github.com/
+      - id: has-published
+        name: Checks if ${{ steps.prepare.outputs.package-name }}@${{ steps.prepare.outputs.version }} is already published
+        uses: ./.github/actions/check-if-package-has-published
+        with:
+          name: ${{ matrix.package-name }}
+          token: ${{ github.token }}
+          version: ${{ steps.prepare.outputs.version }}
       - env:
           NODE_AUTH_TOKEN: ${{ github.token }}
-        id: package-existence
-        name: Check if package already present
-        run: |
-          EXIST=`npm view ${{ steps.prepare.outputs.package-id }} --json 2>/dev/null | jq -r 'if .error then if .error.code == "E404" then false else halt_error(1) end else true end'` && true || exit 1
-
-          echo exist=$EXIST >> $GITHUB_OUTPUT
-      - env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
-        if: ${{ steps.package-existence.outputs.exist == 'false' }}
+        if: ${{ steps.has-published.outputs.published == 'false' }}
         name: Publish ${{ steps.prepare.outputs.package-id }}
         run: |
           ls -l ${{ steps.prepare.outputs.tarball }}
