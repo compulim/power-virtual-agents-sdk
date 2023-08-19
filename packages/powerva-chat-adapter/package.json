@@ -1,6 +1,6 @@
 {
   "name": "powerva-chat-adapter",
-  "version": "0.0.0-0",
+  "version": "0.0.1-0",
   "description": "Chat adapter for using Power Virtual Agents chatbots.",
   "author": "Microsoft Corporation",
   "homepage": "https://github.com/microsoft/power-virtual-agents-sdk/",

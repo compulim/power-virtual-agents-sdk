@@ -1,6 +1,6 @@
 {
   "name": "powerva-chat-adapter-test-util",
-  "version": "0.0.0-0",
+  "version": "0.0.1-0",
   "description": "Test utilities for Power Virtual Agents chat adapter.",
   "author": "Microsoft Corporation",
   "homepage": "https://github.com/microsoft/power-virtual-agents-sdk/",
