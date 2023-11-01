@@ -36,6 +36,12 @@
       "require": "./lib/commonjs/PrebuiltBotAPIStrategy.js",
       "types": "./lib/types/PrebuiltBotAPIStrategy.d.ts"
     },
+    "./PublishedBotAPIStrategy": {
+      "esnext": "./lib/esnext/PublishedBotAPIStrategy.js",
+      "import": "./lib/esmodules/PublishedBotAPIStrategy.js",
+      "require": "./lib/commonjs/PublishedBotAPIStrategy.js",
+      "types": "./lib/types/PublishedBotAPIStrategy.d.ts"
+    },
     "./TurnBasedChatAdapterAPI": {
       "types": "./lib/types/types/TurnBasedChatAdapterAPI.d.ts"
     },

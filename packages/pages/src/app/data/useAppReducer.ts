@@ -1,43 +1,55 @@
 import { useCallback, useMemo, useReducer } from 'react';
+
+import { type BotType } from '../types/BotType';
 import onErrorResumeNext from '../util/onErrorResumeNext';
 
 type State = {
   botIdentifier: string;
+  botSchema: string;
   environmentID: string;
   hostnameSuffix: string;
   tenantID?: string;
   token: string;
+  type: BotType;
 };
 
 type ResetAction = { type: 'RESET' };
 type SaveToSessionStorageAction = { type: 'SAVE_TO_SESSION_STORAGE' };
 type SetBotIdentifierAction = { payload: string; type: 'SET_BOT_IDENTIFIER' };
+type SetBotSchemaAction = { payload: string; type: 'SET_BOT_SCHEMA' };
 type SetEnvironmentIDAction = { payload: string; type: 'SET_ENVIRONMENT_ID' };
 type SetHostnameSuffixAction = { payload: string; type: 'SET_HOSTNAME_SUFFIX' };
 type SetTokenAction = { payload: string; type: 'SET_TOKEN' };
+type SetTypeAction = { payload: BotType; type: 'SET_TYPE' };
 
 type Action =
   | ResetAction
   | SaveToSessionStorageAction
   | SetBotIdentifierAction
+  | SetBotSchemaAction
   | SetEnvironmentIDAction
   | SetHostnameSuffixAction
-  | SetTokenAction;
+  | SetTokenAction
+  | SetTypeAction;
 
 type DispatchAction = {
   reset: () => void;
   saveToSessionStorage: () => void;
   setBotIdentifier: (botIdentifier: string) => void;
+  setBotSchema: (botSchema: string) => void;
   setEnvironmentID: (environmentID: string) => void;
   setHostnameSuffix: (hostnameSuffix: string) => void;
   setToken: (token: string) => void;
+  setType: (type: BotType) => void;
 };
 
 const DEFAULT_STATE: State = {
   botIdentifier: '',
+  botSchema: '',
   environmentID: '',
   hostnameSuffix: 'api.powerplatform.com',
-  token: ''
+  token: '',
+  type: 'prebuilt bot'
 };
 
 export default function useAppReducer(): readonly [State, Readonly<DispatchAction>] {
@@ -49,6 +61,10 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
     } else if (action.type === 'SET_BOT_IDENTIFIER') {
       if (state.botIdentifier !== action.payload) {
         state = { ...state, botIdentifier: action.payload };
+      }
+    } else if (action.type === 'SET_BOT_SCHEMA') {
+      if (state.botSchema !== action.payload) {
+        state = { ...state, botSchema: action.payload };
       }
     } else if (action.type === 'SET_ENVIRONMENT_ID') {
       if (state.environmentID !== action.payload) {
@@ -62,6 +78,8 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
       if (state.token !== action.payload) {
         state = { ...state, token: action.payload };
       }
+    } else if (action.type === 'SET_TYPE') {
+      state = { ...state, type: action.payload === 'published bot' ? 'published bot' : 'prebuilt bot' };
     }
 
     return state;
@@ -81,6 +99,11 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
     [dispatch]
   );
 
+  const setBotSchema = useCallback(
+    (botSchema: string) => dispatch({ payload: botSchema, type: 'SET_BOT_SCHEMA' }),
+    [dispatch]
+  );
+
   const setEnvironmentID = useCallback(
     (environmentID: string) => dispatch({ payload: environmentID, type: 'SET_ENVIRONMENT_ID' }),
     [dispatch]
@@ -92,6 +115,11 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
   );
 
   const setToken = useCallback((token: string) => dispatch({ payload: token, type: 'SET_TOKEN' }), [dispatch]);
+  const setType = useCallback(
+    (type: BotType) =>
+      dispatch({ payload: type === 'published bot' ? 'published bot' : 'prebuilt bot', type: 'SET_TYPE' }),
+    [dispatch]
+  );
 
   const dispatchActions = useMemo(
     () =>
@@ -99,11 +127,13 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
         reset,
         saveToSessionStorage,
         setBotIdentifier,
+        setBotSchema,
         setEnvironmentID,
         setHostnameSuffix,
-        setToken
+        setToken,
+        setType
       }),
-    [setBotIdentifier, setEnvironmentID, setHostnameSuffix, setToken]
+    [setBotIdentifier, setBotSchema, setEnvironmentID, setHostnameSuffix, setToken, setType]
   );
 
   return Object.freeze([state, dispatchActions]);
