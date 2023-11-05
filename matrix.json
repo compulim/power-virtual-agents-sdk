@@ -1,0 +1,30 @@
+{
+  "packages": [
+    {
+      "name": "powerva-chat-adapter-test-util",
+      "path": "packages/powerva-chat-adapter-test-util",
+      "tarball": "powerva-chat-adapter-test-util-0.0.1.tgz",
+      "version": "0.0.1"
+    },
+    {
+      "name": "powerva-turn-based-chat-adapter-framework",
+      "path": "packages/powerva-turn-based-chat-adapter-framework",
+      "tarball": "powerva-turn-based-chat-adapter-framework-0.0.1-0.tgz",
+      "version": "0.0.1-0"
+    },
+    {
+      "name": "powerva-chat-adapter",
+      "path": "packages/powerva-chat-adapter",
+      "tarball": "powerva-chat-adapter-0.0.1.tgz",
+      "version": "0.0.1"
+    },
+    {
+      "name": "pages",
+      "path": "packages/pages",
+      "tarball": "pages-0.0.0-0.tgz",
+      "version": "0.0.0-0"
+    }
+  ],
+  "publishToNPM": true,
+  "publishToGitHubRelease": true
+}
