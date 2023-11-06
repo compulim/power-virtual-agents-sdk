@@ -96,7 +96,7 @@
     "botframework-directlinejs": "^0.15.4",
     "lodash": "^4.17.21",
     "p-retry": "^5.1.2",
-    "powerva-chat-adapter-test-util": "^0.0.1",
+    "powerva-chat-adapter-test-util": "^0.0.2-0",
     "uuid": "^8.3.2"
   }
 }

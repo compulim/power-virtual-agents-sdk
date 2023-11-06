@@ -1,6 +1,6 @@
 {
   "name": "powerva-chat-adapter",
-  "version": "0.0.1",
+  "version": "0.0.2-0",
   "description": "Chat adapter for using Power Virtual Agents chatbots.",
   "author": "Microsoft Corporation",
   "homepage": "https://github.com/microsoft/conversational-ai-chat-sdk/",
@@ -91,8 +91,8 @@
     "botframework-directlinejs": "^0.15.4",
     "lodash": "^4.17.21",
     "p-retry": "^5.1.2",
-    "powerva-chat-adapter-test-util": "^0.0.1",
-    "powerva-turn-based-chat-adapter-framework": "^0.0.0",
+    "powerva-chat-adapter-test-util": "^0.0.2-0",
+    "powerva-turn-based-chat-adapter-framework": "^0.0.1-0",
     "uuid": "^8.3.2"
   }
 }
