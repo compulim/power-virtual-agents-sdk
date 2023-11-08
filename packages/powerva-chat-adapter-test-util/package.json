@@ -4,6 +4,9 @@
   "description": "Test utilities for Power Virtual Agents chat adapter.",
   "author": "Microsoft Corporation",
   "homepage": "https://github.com/microsoft/conversational-ai-chat-sdk/",
+  "repository": {
+    "url": "https://github.com/compulim/conversational-ai-chat-sdk"
+  },
   "license": "MIT",
   "files": [
     "/lib/"

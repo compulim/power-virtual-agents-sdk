@@ -1,0 +1,231 @@
+name: 'On-demand: Create production release'
+run-name: "Production release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      # Until GitHub Workflow supports checkboxes, we need to do this.
+      powerva-chat-adapter:
+        default: true
+        description: powerva-chat-adapter
+        required: true
+        type: boolean
+      powerva-chat-adapter-test-util:
+        default: true
+        description: powerva-chat-adapter-test-util
+        required: true
+        type: boolean
+      powerva-turn-based-chat-adapter-framework:
+        default: false
+        description: powerva-turn-based-chat-adapter-framework
+        required: true
+        type: boolean
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  node-version: lts/Iron
+  pull_request_branch: ${{ format('bot/bump-after-release/{0}', github.run_number) }}
+  release_branch: ${{ format('bot/release/production/{0}', github.run_number) }}
+  skip-secure-feed: false
+
+# Disable all permissions and explicitly specific in the job.
+permissions: {}
+
+jobs:
+  prepare:
+    name: Prepare
+    outputs:
+      json-name: ${{ steps.set-output.outputs.name }}
+      name: ${{ steps.set-output.outputs.name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Sanity check: at least one package must be marked for release'
+        run: |
+          [[ \
+            "${{ inputs.powerva-chat-adapter }}" == "true" || \
+            "${{ inputs.powerva-chat-adapter-test-util }}" == "true" || \
+            "${{ inputs.powerva-turn-based-chat-adapter-framework }}" == "true" \
+          ]]
+      - id: set-output
+        name: Set outputs
+        run: |
+          echo [] > name.json
+
+          # Packages must follow the order as appear in package.json/workspaces.
+          [[ "${{ inputs.powerva-chat-adapter-test-util }}" == "true" ]] && cat name.json | jq -r '. + ["powerva-chat-adapter-test-util"]' > name.json.tmp && mv name.json.tmp name.json
+          [[ "${{ inputs.powerva-turn-based-chat-adapter-framework }}" == "true" ]] && cat name.json | jq -r '. + "powerva-turn-based-chat-adapter-framework"]' > name.json.tmp && mv name.json.tmp name.json
+          [[ "${{ inputs.powerva-chat-adapter }}" == "true" ]] && cat name.json | jq -r '. + ["powerva-chat-adapter"]' > name.json.tmp && mv name.json.tmp name.json
+
+          {
+            echo 'name<<EOF'
+            cat name.json | jq -r '.[]'
+            echo EOF
+          } | tee --append $GITHUB_OUTPUT
+
+          echo json-name=$(cat name.json | jq -cr) | tee --append $GITHUB_OUTPUT
+
+  release-branch:
+    environment:
+      name: owner
+      url: ${{ format('{0}/{1}/tree/{2}', github.server_url, github.repository, env.release_branch) }}
+    name: Create release branch
+    needs:
+      - prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js ${{ env.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node-version }}
+
+      - if: "env.skip-secure-feed != 'true'"
+        name: Set up secure feed
+        run: npx https://aka.ms/EnableSecureFeed
+
+      - run: npm install --global --ignore-scripts keep-a-changelog@latest # Ignore scripts to prevent malicious scripts.
+
+      # We intentionally checkout after enable secure feed.
+      # This will speed up secure feed setup significantly as it don't need to patch package-lock.json.
+      # But we also need to be super careful we don't run any NPM commands that would fetch the registry. We are insecure here.
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_PULL_REQUEST }}
+
+      - name: Bump versions
+        run: |
+          for name in $(echo '${{ toJSON(needs.prepare.outputs.name) }}' | jq -r)
+          do
+            echo ::group::$name
+
+            # We will do workspaces-update later via npm-update-workspace-packages action
+            npm version \
+              --no-git-tag-version \
+              --no-workspaces-update \
+              --package-lock-only \
+              --workspace="$name" patch
+
+            path=$(npm query [name="$name"] | jq -r .[0].path)
+            echo path=$path
+
+            version=$(cat $path/package.json | jq -r '.version')
+            echo version=$version
+
+            echo $name@$version
+
+            git add $path/package.json
+
+            echo ::endgroup::
+          done
+
+          git add ./package-lock.json
+
+      - name: Bump CHANGELOG
+        run: |
+          for name in $(echo '${{ toJSON(needs.prepare.outputs.name) }}' | jq -r)
+          do
+            echo ::group::$name
+
+            path=$(npm query [name="$name"] | jq -r .[0].path)
+            echo path=$path
+
+            version=$(cat $path/package.json | jq -r '.version')
+            echo version=$version
+
+            echo $name@$version
+
+            npx \
+              --offline \
+              --workspace="$name" \
+              keep-a-changelog \
+              --file="./CHANGELOG.md" \
+              --format=markdownlint \
+              --release="$version" \
+              --url="${{ format('{0}/{1}', github.server_url, github.repository) }}" || true
+
+            git add $path/CHANGELOG.md
+
+            echo ::endgroup::
+          done
+
+          git add ./package-lock.json
+
+      - id: version-overrides
+        name: Get version overrides
+        run: |
+          # When publishing production packages to NPM, the package should only use non-prerelease version.
+
+          # If we are not publishing all packages at the same time, we will need to rollback
+          # the version of non-publishing packages to what we current have on NPM registry.
+
+          overrides_json=[]
+
+          for path in $(cat ./package.json | jq -r '.workspaces[]')
+          do
+            name=$(cat $path/package.json | jq -r '.name')
+            private=$(cat $path/package.json | jq -r '.private')
+            version=$(cat $path/package.json | jq -r '.version')
+
+            if [[ $private != "true" && $version == *'-'* ]]
+            then
+              echo Getting version number from NPM for package $name@latest.
+
+              version_in_registry=$(npm view $name@latest --json | jq -r '.version')
+
+              overrides_json=$(
+                echo $overrides_json | \
+                  jq \
+                    --arg name $name \
+                    --arg versionInRegistry $version_in_registry \
+                    -cr \
+                    '. + [$name + "@" + $versionInRegistry]' \
+              )
+            fi
+          done
+
+          # Example:
+          # overrides_json=[
+          #   "powerva-chat-adapter-test-util@0.0.1",
+          #   "powerva-chat-adapter@0.0.1"
+          # ]
+          echo overrides_json=$overrides_json
+
+          {
+            echo 'overrides<<EOF'
+            echo $overrides_json | jq -r '.[]'
+            echo EOF
+          } | tee --append $GITHUB_OUTPUT
+
+      - name: Run npm update on workspace packages
+        uses: ./.github/actions/npm-update-workspace-packages
+        with:
+          overrides: ${{ steps.version-overrides.outputs.overrides }}
+
+      - name: Build and stage matrix.json
+        uses: ./.github/actions/build-matrix-file
+        with:
+          publishingPackages: ${{ needs.prepare.outputs.name }}
+          publishToNPM: true
+          publishToGitHubRelease: true
+          stage: true
+
+      - name: Print changes
+        run: git status --verbose
+
+      - name: Create branch
+        run: git checkout -b ${{ env.release_branch }}
+
+      - name: Configure Git
+        run: |
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "@${{ github.actor }}"
+
+      - name: Commit to branch
+        run: git commit --message "Create production release for ${{ join(needs.prepare.outputs.json-name, ', ') }}"
+
+      - name: Push branch
+        run: git push --set-upstream origin ${{ env.release_branch }}
+
+# TODO: Should run build/test to make sure versions are compatible.

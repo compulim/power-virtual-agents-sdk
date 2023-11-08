@@ -13,7 +13,7 @@ inputs:
     required: true
 outputs:
   published:
-    value: ${{ steps.result.outputs.published }}
+    value: ${{ steps.result.outputs.published == 'true' }}
 runs:
   using: composite
   steps:

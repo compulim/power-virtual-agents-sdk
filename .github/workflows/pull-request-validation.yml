@@ -1,4 +1,4 @@
-name: Pull request validation
+name: 'CI: Pull request validation'
 
 on:
   pull_request:
@@ -11,14 +11,14 @@ defaults:
     shell: bash
 
 env:
-  node-version: lts/Hydrogen
+  node-version: lts/Iron
 
 jobs:
   sanity-check-root:
     name: 'Sanity check: root package'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Assumption in our toolchain.
       - name: 'Sanity check: package path must match their package name'
@@ -50,32 +50,41 @@ jobs:
           - ubuntu-latest
           - windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Use Node.js ${{ env.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.node-version }}
           cache: npm
+
       - run: npm clean-install --ignore-scripts --strict-peer-deps # Prevents malicious scripts from stealing our token.
+
       - run: npm run postinstall --if-present --workspaces=true # Run whitelisted postinstall scripts.
+
       - name: Run static code analysis
         run: npm run precommit --workspaces=true
+
       - name: Build
         run: npm run build --if-present --workspaces=true
+
       - if: strategy.job-index == 0
         name: Pack tarballs
         run: |
           mkdir -p .tmp/tarball
           npm pack --json --pack-destination=.tmp/tarball --workspaces=true > .tmp/pack-result.json
+
       - if: strategy.job-index == 0
         name: Print pack result
         run: cat .tmp/pack-result.json | jq -r 'map(del(.files))'
+
       - if: strategy.job-index == 0
         name: Upload tarball artifact
         uses: actions/upload-artifact@v3
         with:
           name: tarball
           path: .tmp/tarball/*.tgz
+
       - id: set-outputs
         if: strategy.job-index == 0
         name: Set outputs
@@ -93,19 +102,25 @@ jobs:
     strategy:
       matrix:
         include: ${{ fromJSON(needs.build.outputs.test-matrix) }}
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Use Node.js ${{ env.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.node-version }}
-          cache: 'npm'
+          cache: npm
+
       - run: npm clean-install --ignore-scripts --strict-peer-deps # Prevents malicious scripts from stealing our token.
+
       - run: npm run postinstall --if-present --workspaces=true # Run whitelisted postinstall scripts.
+
       - uses: actions/download-artifact@v3
         with:
           name: tarball
           path: .tmp/tarball/
+
       - env:
           package_matrix: ${{ needs.build.outputs.package-matrix }}
         name: Extract tarballs
@@ -120,6 +135,7 @@ jobs:
 
             tar -xvf .tmp/tarball/$filename --directory=packages/$name --strip-components=1
           done
+
       - name: Test
         run: npm test --if-present --workspace=${{ matrix.name }}
 
@@ -131,45 +147,58 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.build.outputs.package-matrix) }}
+
     steps:
       - name: Download tarball artifact
         uses: actions/download-artifact@v3
         with:
           name: tarball
+
       - name: Extract tarball to root
         run: tar --extract --file=${{ matrix.filename }} --strip-components=1 --verbose
+
       - id: prepare
         name: Prepare
         run: echo is-private=$(cat ./package.json | jq -r '.private // false') | tee --append $GITHUB_OUTPUT
+
       - name: 'Sanity check: package name must not be scoped'
         # This is because our rescoping step in continuous deployment will not work if the package is already scoped, it just do plain concat.
         # We can support scoped package if we add that feature to our CD pipeline.
         run: cat ./package.json | jq 'if .name | contains("@") then halt_error(1) else empty end'
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: has LICENSE'
         run: '[[ -f ./LICENSE ]]'
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: has README.md'
         run: '[[ -f ./README.md ]]'
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: at least one exports'
         run: cat ./package.json | jq '.exports | to_entries | if length == 0 then halt_error(1) else empty end'
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: all exports exists'
         run: cat ./package.json | jq '.exports | map(flatten) | flatten | .[]' | xargs -L1 test -f
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: all exports has "types" condition'
         run: cat ./package.json | jq '.exports | map(select(.types == null)) | if length > 0 then halt_error(1) else empty end'
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: has source maps'
         # TODO: Check if abc.js has abc.js.map, instead of just *.js.map.
         run: compgen -G lib/**/*.js.map
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: no lib/**/*.spec.*'
         run: '! compgen -G lib/**/*.spec.*'
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: no lib/**/*.test.*'
         run: '! compgen -G lib/**/*.test.*'
+
       - env:
           package_matrix: ${{ needs.build.outputs.package-matrix }}
         name: 'Sanity check: no production dependencies are pre-release except local peers'
@@ -180,8 +209,10 @@ jobs:
           cat ./package.json | jq \
             --argfile matrix .tmp/package-matrix.json \
             '.dependencies + ($matrix | map({ key: .name }) | from_entries) | with_entries(select(.value // "" | contains("-"))) | if length > 0 then halt_error(1) else empty end'
+
       - name: 'Sanity check: version must be prerelease and ends with -0'
         run: '[[ "$(cat ./package.json | jq -r ''.version'')" == *-0 ]]'
+
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: package.json/files must contains at least one item'
         run: cat ./package.json | jq '.files // [] | if length == 0 then halt_error(1) else empty end'

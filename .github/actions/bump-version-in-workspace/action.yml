@@ -1,0 +1,62 @@
+name: Bump version
+description: Bump version of workspace packages and propagate it to dependents.
+inputs:
+  name:
+    description: Name of the packages to bump. Separate each package name with a newline.
+    required: true
+  stage:
+    default: true
+    description: Stage modified package.json
+    type: boolean
+  version:
+    description: Version
+    required: true
+outputs:
+  version:
+    value: ${{ steps.version.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    # For unknown reasons, NPM can't update other packages in the workspace and will say the previous version was not found.
+    # This action is for updating other packages in the workspace manually.
+    - name: Bump version and dependents
+      run: |
+        for name in $(echo '${{ toJSON(inputs.name) }}' | jq -r)
+        do
+          echo ::group::$name
+
+          path=$(npm query [name=$name] | jq -r .[0].path)
+
+          npm version \
+            --no-git-tag-version \
+            --no-workspaces-update \
+            --package-lock-only \
+            --workspace=$name ${{ inputs.version }}
+
+          cat $path/package.json
+
+          [[ "${{ inputs.stage }}" == "true" ]] && git add $path/package.json
+
+          # The actual version bumped to, may differ from inputs.version, such as "prepatch".
+          # We should bump to what is in the package.json.
+          version=$(cat $path/package.json | jq -r '.version')
+
+          for path in $(cat ./package.json | jq -r '.workspaces[]')
+          do
+            dependent_name=$(cat $path/package.json | jq -r '.name')
+
+            if [[ "$(cat $path/package.json | jq --arg name "$name" -r 'if (.dependencies + .devDependencies)[$name] then true else false end')" == "true" ]]
+            then
+              # We should do audit at another time, not when bumping versions.
+              npm install --no-audit --ignore-scripts --package-lock-only --workspace=$dependent_name $name@$version
+
+              [[ "${{ inputs.stage }}" == "true" ]] && git add $path/package.json
+            fi
+          done
+
+          echo ::endgroup::
+        done
+
+        [[ "${{ inputs.stage }}" == "true" ]] && git add ./package-lock.json
+      shell: bash

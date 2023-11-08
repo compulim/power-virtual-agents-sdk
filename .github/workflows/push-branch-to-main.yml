@@ -1,0 +1,174 @@
+name: 'CD: Push to main'
+run-name: "${{ github.event_name != 'push' && format('Continuous deployment: {0} on {1}', github.event_name, github.ref_name) || null }}"
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.azdo/**'
+      - '.devcontainer/**'
+      - '.github/**'
+  workflow_dispatch: {}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  branch: ${{ format('bot/release/{0}/{1}', github.ref_name, github.run_number) }}
+  dry-run: false
+  node-version: lts/Iron # Node.js 20
+  skip-secure-feed: false
+
+# Disable all permissions and explicitly specific in the job.
+permissions: {}
+
+jobs:
+  prepare:
+    name: Prepare
+    outputs:
+      short_commitish: ${{ steps.set-outputs.outputs.short_commitish }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: set-outputs
+        name: Set outputs
+        run: |
+          # The short commitish is at the root because the package can be influenced by /package-lock.json too.
+          # For example, dependencies updated but meeting semver in package.json. We should still release a newer version.
+
+          # Example: short_commitish=0bf2b81
+          short_commitish=$(git log --pretty=format:'%h' -1)
+          echo short_commitish=$short_commitish | tee --append $GITHUB_OUTPUT
+
+  create-branch:
+    env:
+      short_commitish: ${{ needs.prepare.outputs.short_commitish }}
+    environment:
+      name: owner
+      url: ${{ format('{0}/{1}/tree/{2}', github.server_url, github.repository, env.branch) }}
+    name: Create release branch
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js ${{ env.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node-version }}
+
+      - if: "env.skip-secure-feed != 'true'"
+        name: Set up secure feed
+        run: npx https://aka.ms/EnableSecureFeed
+
+      - run: npm install --global --ignore-scripts semver@latest # Ignore scripts to prevent malicious scripts.
+
+      # We intentionally checkout after enable secure feed.
+      # This will speed up secure feed setup significantly as it don't need to patch package-lock.json.
+      # But we also need to be super careful we don't run any NPM commands that would fetch the registry. We are insecure here.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_PULL_REQUEST }}
+
+      - name: Bump version
+        run: |
+          for path in $(cat ./package.json | jq -cr '.workspaces | .[]')
+          do
+            echo ::group::$path
+
+            name=$(jq -r '.name' ./$path/package.json)
+
+            # Example: committer_date=20230815-110805
+            committer_date=$(git log --date=format:%Y%m%d-%H%M%S --pretty=format:'%cd' -1 ./$path/)
+
+            # This version is not very accurate, after running `npm version`, it will remove leading zeroes in prerelease tags if that certain part is all numeric. This does not repro in semver.
+            # "main.20230815-110805.0bf2b81" -> "main.20230815-110805.0bf2b81"
+            # "main.20230815-110805.0012345" -> "main.20230815-110805.12345"
+            # Example: current_version=0.0.0-0
+            current_version=$(jq -r '.version' ./$path/package.json)
+
+            # We need to use "semver" instead of "npm version" because "semver" can omit prerelease number ("-n false").
+            # Example: propose_version=0.0.0-main.20230815-110805.0bf2b81
+            propose_version=$(\
+              npm exec \
+                --offline \
+                -- \
+                semver \
+                --increment prerelease \
+                -n false \
+                --preid ${{ github.ref_name }}.$committer_date.${{ env.short_commitish }} \
+                $current_version \
+            )
+
+            # We will do workspaces-update later via npm-update-workspace-packages action
+            npm version \
+              --no-git-tag-version \
+              --no-workspaces-update \
+              --package-lock-only \
+              --workspace=$name $propose_version
+
+            # Stage package.json
+            git add ./$path/package.json
+
+            cat ./$path/package.json
+
+            echo ::endgroup::
+          done
+
+      - name: Run npm update on workspace packages
+        uses: ./.github/actions/npm-update-workspace-packages
+
+      - name: Stage package-lock.json
+        run: git add ./package-lock.json
+
+      - id: npm-packages
+        name: List packages to publish to NPM
+        run: |
+          package_to_publish_to_npm=[]
+
+          for path in $(cat ./package.json | jq -cr '.workspaces | .[]')
+          do
+            echo ::group::$path
+
+            name=$(cat $path/package.json | jq -r .name)
+            private=$(cat $path/package.json | jq -r .private)
+
+            if [[ $private != "true" ]]
+            then
+              package_to_publish_to_npm=$(echo $package_to_publish_to_npm | jq --arg name "$name" -r '. + [$name]')
+            fi
+
+            echo ::endgroup::
+          done
+
+          {
+            echo 'json<<EOF'
+            echo $package_to_publish_to_npm | jq -r '.[]'
+            echo EOF
+          } | tee --append $GITHUB_OUTPUT
+
+      - uses: ./.github/actions/build-matrix-file
+        with:
+          publishingPackages: ${{ steps.npm-packages.outputs.json }}
+          publishToNPM: true
+          publishToGitHubRelease: false
+          stage: true
+
+      - name: Configure Git
+        run: |
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "@${{ github.actor }}"
+
+      - name: Create branch
+        run: git checkout -b ${{ env.branch }}
+
+      - name: Commit
+        run: git commit --message="Development release for ${{ github.ref }} with commit ${{ env.short_commitish }}"
+
+      - if: "env.dry-run != 'true'"
+        name: Push
+        run: git push --set-upstream origin ${{ env.branch }}

@@ -1,0 +1,128 @@
+name: Build matrix.json
+description: Build matrix.json from current checkout
+inputs:
+  publishingPackages:
+    description: Packages to publish, each separated by a newline.
+    required: false
+    type: string
+  publishToGitHubRelease:
+    default: false
+    description: Publish to GitHub Release.
+    required: false
+    type: boolean
+  publishToNPM:
+    default: false
+    description: Publish to NPM.
+    required: false
+    type: boolean
+  stage:
+    default: true
+    description: Stage to Git.
+    required: true
+    type: boolean
+
+runs:
+  using: composite
+  steps:
+    - name: Build matrix
+      run: |
+        [[ ! -f ./matrix.json ]] && echo {} | tee --append ./matrix.json
+
+        for path in $(cat ./package.json | jq -cr '.workspaces | .[]')
+        do
+          echo ::group::Add $path to "packages"
+
+          cat ./$path/package.json
+
+          cat ./matrix.json | jq \
+            --arg path "$path" \
+            --argfile packageJSON ./$path/package.json \
+            -r \
+            '.packages += [{ name: $packageJSON.name, path: $path, tarball: ($packageJSON.name + "-" + $packageJSON.version + ".tgz"), version: $packageJSON.version }]' \
+            > ./matrix.json.tmp
+
+          mv ./matrix.json.tmp ./matrix.json
+
+          echo ::endgroup::
+        done
+      shell: bash
+
+    - name: Build packages to publish
+      run: |
+        for name in $(echo '${{ toJSON(inputs.publishingPackages) }}' | jq -r)
+        do
+          echo ::group::Add $name to "publishingPackages"
+
+          private=$(npm pkg get private --json --workspaces | jq --arg name "$name" -r '.[$name]')
+
+          if [[ $private == "true" ]]
+          then
+            echo ::error::Cannot publish private package "${name}".
+            exit 1
+          fi
+
+          jq \
+            --arg name "$name" \
+            --argfile matrixJSON ./matrix.json \
+            -n \
+            -r \
+            '$matrixJSON | .publishingPackages += ($matrixJSON.packages | map(select(.name == $name)))' \
+            | tee ./matrix.tmp.json
+
+          mv ./matrix.tmp.json ./matrix.json
+
+          echo ::endgroup::
+        done
+      shell: bash
+
+    - name: Mark as publish to NPM
+      run: |
+        echo ::group::Mark as publish to NPM
+
+        cat ./matrix.json | jq -r '.publishToNPM = ${{ inputs.publishToNPM }}' | tee ./matrix.json.tmp
+        mv ./matrix.json.tmp ./matrix.json
+
+        echo ::endgroup::
+      shell: bash
+
+    - name: Mark as publish to GitHub Release
+      run: |
+        echo ::group::Mark as publish to GitHub Release
+
+        cat ./matrix.json | jq -r '.publishToGitHubRelease = ${{ inputs.publishToGitHubRelease }}' | tee ./matrix.json.tmp
+        mv ./matrix.json.tmp ./matrix.json
+
+        echo ::endgroup::
+      shell: bash
+
+    - name: Print matrix.json
+      run: cat ./matrix.json
+      shell: bash
+
+    - name: 'Sanity check: matrix should list all workspaces'
+      run: |
+        cat ./matrix.json | jq \
+          --argfile packageJSON ./package.json \
+          'if (.packages | map(.path)) == ($packageJSON.workspaces) then empty else halt_error(1) end'
+      shell: bash
+
+    - name: 'Sanity check: all entries must have "name" field'
+      run: cat ./matrix.json | jq 'if .packages | map(select(.name | not)) | length == 0 then empty else halt_error(1) end'
+      shell: bash
+
+    - name: 'Sanity check: all entries must have "path" field'
+      run: cat ./matrix.json | jq 'if .packages | map(select(.path | not)) | length == 0 then empty else halt_error(1) end'
+      shell: bash
+
+    - name: 'Sanity check: all entries must have "tarball" field'
+      run: cat ./matrix.json | jq 'if .packages | map(select(.tarball | not)) | length == 0 then empty else halt_error(1) end'
+      shell: bash
+
+    - name: 'Sanity check: all entries must have "version" field'
+      run: cat ./matrix.json | jq 'if .packages | map(select(.version | not)) | length == 0 then empty else halt_error(1) end'
+      shell: bash
+
+    - if: inputs.stage
+      name: Stage matrix.json
+      run: git add ./matrix.json
+      shell: bash
