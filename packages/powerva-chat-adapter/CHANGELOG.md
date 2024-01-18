@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added new subprotocol for published bot, by [@compulim](https://github.com/compulim)
+- Added emitStartConversationEvent option to fromTurnBasedChatAdapterAPI [@tdurnford](https://github.com/tdurnford)
 
 ## [0.0.0] - 2023-08-19
 
