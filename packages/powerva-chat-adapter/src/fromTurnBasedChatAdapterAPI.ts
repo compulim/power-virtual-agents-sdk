@@ -18,7 +18,10 @@ type StartConversationCallback = ConstructorParameters<typeof TurnBasedChatAdapt
 /**
  * Converts a turn-based chat API into a chat adapter for Bot Framework Web Chat.
  */
-export default function fromTurnBasedChatAdapterAPI(api: TurnBasedChatAdapterAPI, { emitStartConversationEvent = true }: TurnBasedChatAdapterOptions = {}): ChatAdapter {
+export default function fromTurnBasedChatAdapterAPI(
+  api: TurnBasedChatAdapterAPI,
+  { emitStartConversationEvent = true }: TurnBasedChatAdapterOptions = {}
+): ChatAdapter {
   let iterating = false;
   let nextSequenceID = 0;
 
