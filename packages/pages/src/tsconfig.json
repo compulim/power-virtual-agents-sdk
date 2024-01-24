@@ -3,7 +3,7 @@
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "lib": ["DOM", "ESNext", "WebWorker"],
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "Bundler",
     "noEmit": true,
     "preserveWatchOutput": true,
     "skipLibCheck": true,
