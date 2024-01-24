@@ -23,13 +23,17 @@ export default function toDirectLineJS(
   const activityDeferredObservable = new DeferredObservable<Activity>(observer => {
     connectionStatusDeferredObservable.next(0);
     connectionStatusDeferredObservable.next(1);
-    connectionStatusDeferredObservable.next(2);
+
+    let firstActivityReceived = false;
 
     (async function () {
       let [activities, getReturnValue] = iterateWithReturnValue(startConversation());
 
       for (;;) {
         for await (const activity of activities) {
+          firstActivityReceived || connectionStatusDeferredObservable.next(2);
+
+          firstActivityReceived = true;
           observer.next(activity);
         }
 
