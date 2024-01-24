@@ -1,3 +1,0 @@
-{
-  "extends": "../../configs/babel/babel.esnext.config.json"
-}

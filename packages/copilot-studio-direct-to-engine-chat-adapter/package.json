@@ -61,6 +61,7 @@
     "iterate-with-return-value": "^0.0.0-0",
     "p-retry": "^5.1.2",
     "powerva-turn-based-chat-adapter-framework": "^0.0.1-0",
+    "uuid": "^9.0.1",
     "valibot": "^0.26.0"
   }
 }

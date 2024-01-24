@@ -27,15 +27,14 @@ const createExecuteTurn = (api: HalfDuplexChatAdapterAPI): ExecuteTurnFunction =
   };
 };
 
-export default async function* startConversation(
-  strategy: HalfDuplexChatAdapterAPIStrategy,
-  init: Init = {}
-): AsyncGenerator<Activity, ExecuteTurnFunction, undefined> {
-  const api = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, init);
+export default function createStartConversation(strategy: HalfDuplexChatAdapterAPIStrategy, init: Init = {}) {
+  return async function* (): AsyncGenerator<Activity, ExecuteTurnFunction, undefined> {
+    const api = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, init);
 
-  const activities = await api.startNewConversation(init?.emitStartConversationEvent || true);
+    const activities = await api.startNewConversation(init?.emitStartConversationEvent || true);
 
-  yield* activities;
+    yield* activities;
 
-  return createExecuteTurn(api);
+    return createExecuteTurn(api);
+  };
 }
