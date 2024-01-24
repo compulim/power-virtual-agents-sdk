@@ -1,0 +1,3 @@
+{
+  "pva:extends": "../../configs/jest/jest.config.json"
+}

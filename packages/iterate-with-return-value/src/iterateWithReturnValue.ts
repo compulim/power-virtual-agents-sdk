@@ -1,3 +1,5 @@
+const IterationNotCompleted = Symbol();
+
 class IterableIteratorWithReturnValue<T, TReturn, TNext> implements IterableIterator<T> {
   constructor(iterator: Iterator<T, TReturn, TNext>) {
     this.next = this.#spy(iterator.next.bind(iterator));
@@ -9,37 +11,39 @@ class IterableIteratorWithReturnValue<T, TReturn, TNext> implements IterableIter
     return this;
   }
 
-  #returnValue: TReturn | undefined = undefined;
-  #returnValueSet: boolean = false;
+  #returnValue: TReturn | typeof IterationNotCompleted = IterationNotCompleted;
 
   #spy<TFn extends (...args: unknown[]) => IteratorResult<T, TReturn>>(fn: TFn) {
     return (...args: Parameters<TFn>): IteratorResult<T, TReturn> => {
       const result = fn(...args);
 
-      if (result.done && !this.#returnValueSet) {
+      if (result.done) {
         this.#returnValue = result.value;
-        this.#returnValueSet = true;
       }
 
       return result;
     };
   }
 
+  getReturnValue(): TReturn {
+    if (this.#returnValue === IterationNotCompleted) {
+      throw new Error('Cannot get return value before iteration completed.');
+    }
+
+    return this.#returnValue;
+  }
+
   next: () => IteratorResult<T>;
   return?(value?: TReturn): IteratorResult<T, TReturn>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   throw?(e?: any): IteratorResult<T, TReturn>;
-
-  get returnValue() {
-    return this.#returnValue;
-  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function literateWithReturnValue<T, TReturn = any, TNext = unknown>(
   iterator: Iterator<T, TReturn, TNext>
-): readonly [IterableIterator<T>, () => TReturn | undefined] {
+): readonly [IterableIterator<T>, () => TReturn] {
   const iterable = new IterableIteratorWithReturnValue(iterator);
 
-  return Object.freeze([iterable, (): TReturn | undefined => iterable.returnValue]);
+  return Object.freeze([iterable, (): TReturn => iterable.getReturnValue()]);
 }

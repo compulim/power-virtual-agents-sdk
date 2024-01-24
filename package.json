@@ -18,6 +18,7 @@
     "packages/powerva-chat-adapter-test-util",
     "packages/powerva-turn-based-chat-adapter-framework",
     "packages/powerva-chat-adapter",
+    "packages/copilot-studio-direct-to-engine-chat-adapter",
     "packages/pages"
   ]
 }
