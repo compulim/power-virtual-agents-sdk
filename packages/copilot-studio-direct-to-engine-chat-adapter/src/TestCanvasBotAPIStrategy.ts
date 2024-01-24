@@ -2,36 +2,27 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  */
 
-import { Output, SpecialSchema, UUID_REGEX, never, object, regex, special, string, url } from 'valibot';
+import { Output, SpecialSchema, UUID_REGEX, never, object, regex, special, string } from 'valibot';
 import { type HalfDuplexChatAdapterAPIStrategy } from './private/types/HalfDuplexChatAdapterAPIStrategy';
 
 const TestCanvasBotAPIStrategyInitSchema = () =>
   object(
     {
       botId: string([regex(UUID_REGEX)]),
-      environmentEndpointURL: string([url()]),
       environmentId: string([regex(UUID_REGEX)]),
-      getTokenCallback: special(input => typeof input === 'function') as SpecialSchema<() => Promise<string>>
+      getTokenCallback: special(input => typeof input === 'function') as SpecialSchema<() => Promise<string>>,
+      islandURI: special(input => input instanceof URL) as SpecialSchema<URL>
     },
     never()
   );
 
 type TestCanvasBotAPIStrategyInit = Output<ReturnType<typeof TestCanvasBotAPIStrategyInitSchema>>;
 
-const API_VERSION = '2022-03-01-preview';
-
 export default class TestCanvasBotAPIStrategy implements HalfDuplexChatAdapterAPIStrategy {
-  constructor({ botId, environmentEndpointURL, environmentId, getTokenCallback }: TestCanvasBotAPIStrategyInit) {
+  constructor({ botId, islandURI, environmentId, getTokenCallback }: TestCanvasBotAPIStrategyInit) {
     this.#getTokenCallback = getTokenCallback;
 
-    const url = new URL(
-      `/environments/${encodeURI(environmentId)}/bots/${encodeURI(botId)}/conversations/`,
-      environmentEndpointURL
-    );
-
-    url.searchParams.set('api-version', API_VERSION);
-
-    this.#baseURL = url;
+    this.#baseURL = new URL(`/environments/${encodeURI(environmentId)}/bots/${encodeURI(botId)}/test/`, islandURI);
   }
 
   #baseURL: URL;

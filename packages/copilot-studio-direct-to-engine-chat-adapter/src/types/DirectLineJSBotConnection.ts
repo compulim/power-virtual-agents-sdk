@@ -10,7 +10,7 @@ export type ActivityId = Tagged<string, 'ActivityId'>;
 
 export type DirectLineJSBotConnection = {
   activity$: Observable<Activity>;
-  close(): void;
   connectionStatus$: Observable<ConnectionStatus>;
+  end(): void;
   postActivity(activity: Activity): Observable<ActivityId>;
 };

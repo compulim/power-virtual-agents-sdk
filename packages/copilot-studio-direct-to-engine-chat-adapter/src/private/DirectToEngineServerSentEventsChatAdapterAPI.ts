@@ -62,7 +62,10 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
 
     const headReader = response.getReader();
 
-    const { activities, conversationId } = parseStartNewConversationResponseHead(await headReader.read());
+    // TODO: Clean up this read, data is string | undefined but JSON.parse expect string.
+    const head = await headReader.read();
+
+    const { activities, conversationId } = parseStartNewConversationResponseHead(JSON.parse(head.value?.data || ''));
 
     this.#conversationId = conversationId;
 
@@ -71,7 +74,11 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
     const restReadable = response.pipeThrough(
       new TransformStream<ParsedEvent, Activity>({
         transform({ data }, controller) {
-          const { activities } = parseStartNewConversationResponseRest(data);
+          if (data === 'DONE') {
+            controller.terminate();
+          }
+
+          const { activities } = parseStartNewConversationResponseRest(JSON.parse(data));
 
           activities.map(controller.enqueue.bind(controller));
         }
@@ -102,7 +109,11 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
       response.pipeThrough(
         new TransformStream<ParsedEvent, Activity>({
           transform({ data }, controller) {
-            const { activities } = parseExecuteTurnResponse(data);
+            if (data === 'DONE') {
+              controller.terminate();
+            }
+
+              const { activities } = parseExecuteTurnResponse(JSON.parse(data));
 
             activities.map(controller.enqueue.bind(controller));
           }

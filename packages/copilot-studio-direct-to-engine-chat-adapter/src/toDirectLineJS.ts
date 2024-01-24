@@ -12,11 +12,11 @@ import {
 } from 'powerva-turn-based-chat-adapter-framework';
 import { v4 } from 'uuid';
 
-import createStartConversation from './private/createStartConversation';
+import type createHalfDuplexChatAdapter from './createHalfDuplexChatAdapter';
 import { type ActivityId, type DirectLineJSBotConnection } from './types/DirectLineJSBotConnection';
 
 export default function toDirectLineJS(
-  startConversation: ReturnType<typeof createStartConversation>
+  startConversation: ReturnType<typeof createHalfDuplexChatAdapter>
 ): DirectLineJSBotConnection {
   let postActivityDeferred = new DeferredPromise<readonly [Activity, (id: ActivityId) => void]>();
 
@@ -34,7 +34,14 @@ export default function toDirectLineJS(
           firstActivityReceived || connectionStatusDeferredObservable.next(2);
 
           firstActivityReceived = true;
-          observer.next(activity);
+
+          // TODO: Find out why replyToId is pointing to nowhere.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { replyToId: _, ...patchedActivity } = activity as any;
+
+          console.log({ activity, patchedActivity });
+
+          observer.next(patchedActivity);
         }
 
         const executeTurn = getReturnValue();
@@ -45,7 +52,7 @@ export default function toDirectLineJS(
 
         callback(activityId);
 
-        observer.next({ ...activity, id: activityId });
+        observer.next({ ...activity, id: activityId, timestamp: new Date().toISOString() });
       }
     })();
   });
@@ -54,10 +61,10 @@ export default function toDirectLineJS(
 
   return {
     activity$: shareObservable(activityDeferredObservable.observable),
-    close() {
+    connectionStatus$: shareObservable(connectionStatusDeferredObservable.observable),
+    end() {
       throw new Error('Not implemented.');
     },
-    connectionStatus$: shareObservable(connectionStatusDeferredObservable.observable),
     postActivity(activity: Activity) {
       return new Observable<ActivityId>(observer => {
         postActivityDeferred.resolve(Object.freeze([activity, id => observer.next(id)]));

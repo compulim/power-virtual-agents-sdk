@@ -1,11 +1,12 @@
 import { Fragment, memo, useCallback, useState } from 'react';
 import { useRefFrom } from 'use-ref-from';
 
+import useAppReducer from '../data/useAppReducer';
 import { type PropsOf } from '../types/PropsOf';
 import CredentialForm from './CredentialForm';
-import useAppReducer from '../data/useAppReducer';
 import WebChatViaPrebuiltBot from './WebChatViaPrebuiltBot';
 import WebChatViaPublishedBot from './WebChatViaPublishedBot';
+import WebChatViaTestCanvasBot from './WebChatViaTestCanvasBot';
 
 type SubmittedCredential = {
   botIdentifier: string;
@@ -13,6 +14,7 @@ type SubmittedCredential = {
   environmentID: string;
   hostnameSuffix: string;
   key: number;
+  islandURI?: string;
   tenantID?: string;
   token: string;
   type: string;
@@ -22,7 +24,7 @@ type CredentialFormChangeCallback = Exclude<PropsOf<typeof CredentialForm>['onCh
 
 export default memo(function App() {
   const [
-    { botIdentifier, botSchema, environmentID, hostnameSuffix, token, type },
+    { botIdentifier, botSchema, environmentID, hostnameSuffix, islandURI, token, type },
     {
       reset,
       saveToSessionStorage,
@@ -30,6 +32,7 @@ export default memo(function App() {
       setBotSchema,
       setEnvironmentID,
       setHostnameSuffix,
+      setIslandURI,
       setToken,
       setType
     }
@@ -39,21 +42,32 @@ export default memo(function App() {
   const botSchemaRef = useRefFrom(botSchema);
   const environmentIDRef = useRefFrom(environmentID);
   const hostnameSuffixRef = useRefFrom(hostnameSuffix);
+  const islandURIRef = useRefFrom(islandURI);
   const tokenRef = useRefFrom(token);
   const typeRef = useRefFrom(type);
 
   const handleCredentialFormChange = useCallback<CredentialFormChangeCallback>(
-    ({ botIdentifier, botSchema, environmentID, hostnameSuffix, token, type }) => {
+    ({ botIdentifier, botSchema, environmentID, hostnameSuffix, islandURI, token, type }) => {
       setBotIdentifier(botIdentifier);
       setBotSchema(botSchema);
       setEnvironmentID(environmentID);
       setHostnameSuffix(hostnameSuffix);
+      setIslandURI(islandURI);
       setToken(token);
       setType(type);
 
       saveToSessionStorage();
     },
-    [saveToSessionStorage, setBotIdentifier, setBotSchema, setEnvironmentID, setHostnameSuffix, setToken, setType]
+    [
+      saveToSessionStorage,
+      setBotIdentifier,
+      setBotSchema,
+      setEnvironmentID,
+      setHostnameSuffix,
+      setIslandURI,
+      setToken,
+      setType
+    ]
   );
 
   const handleReset = useCallback(() => reset(), [reset]);
@@ -65,6 +79,7 @@ export default memo(function App() {
         botSchema: botSchemaRef.current,
         environmentID: environmentIDRef.current,
         hostnameSuffix: hostnameSuffixRef.current,
+        islandURI: islandURIRef.current,
         key: Date.now(),
         token: tokenRef.current,
         type: typeRef.current
@@ -82,6 +97,7 @@ export default memo(function App() {
         botSchema={botSchema}
         environmentID={environmentID}
         hostnameSuffix={hostnameSuffix}
+        islandURI={islandURI}
         token={token}
         type={type}
         onChange={handleCredentialFormChange}
@@ -95,6 +111,16 @@ export default memo(function App() {
                 botSchema={submittedCredential.botSchema}
                 environmentID={submittedCredential.environmentID}
                 hostnameSuffix={submittedCredential.hostnameSuffix}
+                key={submittedCredential.key}
+                token={submittedCredential.token}
+              />
+            )
+          : type === 'test canvas bot'
+          ? submittedCredential.islandURI && (
+              <WebChatViaTestCanvasBot
+                botId={submittedCredential.botIdentifier}
+                environmentId={submittedCredential.environmentID}
+                islandURI={submittedCredential.islandURI}
                 key={submittedCredential.key}
                 token={submittedCredential.token}
               />

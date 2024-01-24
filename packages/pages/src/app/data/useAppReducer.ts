@@ -8,6 +8,7 @@ type State = {
   botSchema: string;
   environmentID: string;
   hostnameSuffix: string;
+  islandURI?: string;
   tenantID?: string;
   token: string;
   type: BotType;
@@ -18,6 +19,7 @@ type SaveToSessionStorageAction = { type: 'SAVE_TO_SESSION_STORAGE' };
 type SetBotIdentifierAction = { payload: string; type: 'SET_BOT_IDENTIFIER' };
 type SetBotSchemaAction = { payload: string; type: 'SET_BOT_SCHEMA' };
 type SetEnvironmentIDAction = { payload: string; type: 'SET_ENVIRONMENT_ID' };
+type SetIslandURIAction = { payload: string; type: 'SET_ISLAND_URI' };
 type SetHostnameSuffixAction = { payload: string; type: 'SET_HOSTNAME_SUFFIX' };
 type SetTokenAction = { payload: string; type: 'SET_TOKEN' };
 type SetTypeAction = { payload: BotType; type: 'SET_TYPE' };
@@ -29,6 +31,7 @@ type Action =
   | SetBotSchemaAction
   | SetEnvironmentIDAction
   | SetHostnameSuffixAction
+  | SetIslandURIAction
   | SetTokenAction
   | SetTypeAction;
 
@@ -39,6 +42,7 @@ type DispatchAction = {
   setBotSchema: (botSchema: string) => void;
   setEnvironmentID: (environmentID: string) => void;
   setHostnameSuffix: (hostnameSuffix: string) => void;
+  setIslandURI: (islandURI: string) => void;
   setToken: (token: string) => void;
   setType: (type: BotType) => void;
 };
@@ -48,6 +52,7 @@ const DEFAULT_STATE: State = {
   botSchema: '',
   environmentID: '',
   hostnameSuffix: 'api.powerplatform.com',
+  islandURI: 'https://pvaruntime.us-il102.gateway.prod.island.powerapps.com',
   token: '',
   type: 'prebuilt bot'
 };
@@ -74,12 +79,20 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
       if (state.hostnameSuffix !== action.payload) {
         state = { ...state, hostnameSuffix: action.payload };
       }
+    } else if (action.type === 'SET_ISLAND_URI') {
+      if (state.islandURI !== action.payload) {
+        state = { ...state, islandURI: action.payload };
+      }
     } else if (action.type === 'SET_TOKEN') {
       if (state.token !== action.payload) {
         state = { ...state, token: action.payload };
       }
     } else if (action.type === 'SET_TYPE') {
-      state = { ...state, type: action.payload === 'published bot' ? 'published bot' : 'prebuilt bot' };
+      state = {
+        ...state,
+        type:
+          action.payload === 'published bot' || action.payload === 'test canvas bot' ? action.payload : 'prebuilt bot'
+      };
     }
 
     return state;
@@ -114,10 +127,18 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
     [dispatch]
   );
 
+  const setIslandURI = useCallback(
+    (islandURI: string) => dispatch({ payload: islandURI, type: 'SET_ISLAND_URI' }),
+    [dispatch]
+  );
+
   const setToken = useCallback((token: string) => dispatch({ payload: token, type: 'SET_TOKEN' }), [dispatch]);
   const setType = useCallback(
     (type: BotType) =>
-      dispatch({ payload: type === 'published bot' ? 'published bot' : 'prebuilt bot', type: 'SET_TYPE' }),
+      dispatch({
+        payload: type === 'published bot' || type === 'test canvas bot' ? type : 'prebuilt bot',
+        type: 'SET_TYPE'
+      }),
     [dispatch]
   );
 
@@ -130,6 +151,7 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
         setBotSchema,
         setEnvironmentID,
         setHostnameSuffix,
+        setIslandURI,
         setToken,
         setType
       }),

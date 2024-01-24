@@ -1,10 +1,10 @@
-import { type ChangeEventHandler, memo, useCallback, useMemo } from 'react';
-import { useRefFrom } from 'use-ref-from';
 import decodeJSONWebToken from 'jwt-decode';
+import { memo, useCallback, useMemo, type ChangeEventHandler } from 'react';
+import { useRefFrom } from 'use-ref-from';
 
 import { type BotType } from '../types/BotType';
-import DoubleTapButton from './DoubleTapButton';
 import onErrorResumeNext from '../util/onErrorResumeNext';
+import DoubleTapButton from './DoubleTapButton';
 
 type Props = {
   autoFocus?: boolean;
@@ -12,11 +12,13 @@ type Props = {
   botSchema?: string;
   environmentID?: string;
   hostnameSuffix?: string;
+  islandURI?: string;
   onChange?: (nextCredential: {
     botIdentifier: string;
     botSchema: string;
     environmentID: string;
     hostnameSuffix: string;
+    islandURI: string;
     token: string;
     type: BotType;
   }) => void;
@@ -32,6 +34,7 @@ export default memo(function CredentialForm({
   botSchema,
   environmentID,
   hostnameSuffix,
+  islandURI,
   onChange,
   onReset,
   onSubmit,
@@ -42,6 +45,7 @@ export default memo(function CredentialForm({
   const botSchemaRef = useRefFrom(botSchema);
   const environmentIDRef = useRefFrom(environmentID);
   const hostnameSuffixRef = useRefFrom(hostnameSuffix);
+  const islandURIRef = useRefFrom(islandURI);
   const onChangeRef = useRefFrom(onChange);
   const onResetRef = useRefFrom(onReset);
   const onSubmitRef = useRefFrom(onSubmit);
@@ -54,23 +58,26 @@ export default memo(function CredentialForm({
       botSchema?: string;
       environmentID?: string;
       hostnameSuffix?: string;
+      islandURI?: string;
       // tenantID?: string;
       token?: string;
       type?: BotType;
     }) => {
-      const type: BotType = typeRef.current === 'published bot' ? 'published bot' : 'prebuilt bot';
+      const type: BotType =
+        typeRef.current === 'published bot' || typeRef.current === 'test canvas bot' ? typeRef.current : 'prebuilt bot';
 
       onChangeRef.current?.({
         botIdentifier: botIdentifierRef.current || '',
         botSchema: botSchemaRef.current || '',
         environmentID: environmentIDRef.current || '',
         hostnameSuffix: hostnameSuffixRef.current || '',
+        islandURI: islandURIRef.current || '',
         token: tokenRef.current || '',
         type,
         ...overrides
       });
     },
-    [botIdentifierRef, botSchemaRef, environmentIDRef, hostnameSuffix, tokenRef, typeRef]
+    [botIdentifierRef, botSchemaRef, environmentIDRef, hostnameSuffix, islandURI, tokenRef, typeRef]
   );
 
   const handleBotIdentifierChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
@@ -93,6 +100,11 @@ export default memo(function CredentialForm({
     [dispatchChange]
   );
 
+  const handleIslandURIChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
+    ({ currentTarget }) => dispatchChange({ islandURI: currentTarget.value }),
+    [dispatchChange]
+  );
+
   const handleSubmit = useCallback<ChangeEventHandler<HTMLFormElement>>(
     event => {
       event.preventDefault();
@@ -103,13 +115,14 @@ export default memo(function CredentialForm({
   );
 
   const handleTokenChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
-    ({ currentTarget }) => dispatchChange({ token: currentTarget.value }),
+    ({ currentTarget: { value } }) =>
+      dispatchChange({ token: /^bearer\s/iu.test(value) ? value.substring(6).trimStart() : value }),
     [dispatchChange]
   );
 
   const handleTypeChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
-    ({ currentTarget }) =>
-      dispatchChange({ type: currentTarget.value === 'published bot' ? 'published bot' : 'prebuilt bot' }),
+    ({ currentTarget: { value } }) =>
+      dispatchChange({ type: value === 'published bot' || value === 'test canvas bot' ? value : 'prebuilt bot' }),
     [dispatchChange]
   );
 
@@ -141,7 +154,7 @@ export default memo(function CredentialForm({
         <dd>
           <label>
             <input
-              checked={type !== 'published bot'}
+              checked={type !== 'published bot' && type !== 'test canvas bot'}
               name="bot-type"
               onChange={handleTypeChange}
               type="radio"
@@ -162,12 +175,33 @@ export default memo(function CredentialForm({
             Published bot
           </label>
         </dd>
-        <label>
-          <dt>Hostname suffix</dt>
-          <dd>
-            <input onChange={handleHostnameSuffixChange} type="text" value={hostnameSuffix || ''} />
-          </dd>
-        </label>
+        <dd>
+          <label>
+            <input
+              checked={type === 'test canvas bot'}
+              name="bot-type"
+              onChange={handleTypeChange}
+              type="radio"
+              value="test canvas bot"
+            />
+            Test canvas bot
+          </label>
+        </dd>
+        {type === 'test canvas bot' ? (
+          <label>
+            <dt>Island URI</dt>
+            <dd>
+              <input onChange={handleIslandURIChange} type="text" value={islandURI || ''} />
+            </dd>
+          </label>
+        ) : (
+          <label>
+            <dt>Hostname suffix</dt>
+            <dd>
+              <input onChange={handleHostnameSuffixChange} type="text" value={hostnameSuffix || ''} />
+            </dd>
+          </label>
+        )}
         <label>
           <dt>Environment ID</dt>
           <dd>
