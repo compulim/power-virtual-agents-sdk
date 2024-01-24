@@ -1,3 +1,7 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
 export default async function* combineAsyncIterables<T>(
   iterables: AsyncIterable<AsyncIterable<T>>
 ): AsyncIterableIterator<T> {

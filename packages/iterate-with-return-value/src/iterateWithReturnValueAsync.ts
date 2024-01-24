@@ -1,3 +1,7 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
 const IterationNotCompleted = Symbol();
 
 class AsyncIterableIteratorWithReturnValue<T, TReturn, TNext> implements AsyncIterableIterator<T> {
