@@ -1,3 +1,7 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
 import iterableToAsyncIterable from './iterableToAsyncIterable';
 
 test('convert iterable to async iterable', async () => {

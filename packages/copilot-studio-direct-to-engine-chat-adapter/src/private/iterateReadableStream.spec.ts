@@ -1,3 +1,7 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
 import iterateReadableStream from './iterateReadableStream';
 
 test('iterate readable stream', async () => {
