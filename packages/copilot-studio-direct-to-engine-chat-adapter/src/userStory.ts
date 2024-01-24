@@ -2,7 +2,7 @@ import { iterateWithReturnValue } from 'iterate-with-return-value/async';
 import Readline from 'readline';
 
 import PublishedBotAPIStrategy from './PublishedBotAPIStrategy';
-import startConversation from './private/startConversation';
+import createStartConversation from './private/createStartConversation';
 
 const strategy = new PublishedBotAPIStrategy({
   botSchema: '',
@@ -13,7 +13,7 @@ const strategy = new PublishedBotAPIStrategy({
 });
 
 (async function () {
-  let activities = await startConversation(strategy);
+  let activities = await createStartConversation(strategy)();
   const rl = Readline.promises.createInterface(process.stdin);
 
   for (;;) {
@@ -33,7 +33,7 @@ const strategy = new PublishedBotAPIStrategy({
 })();
 
 (async function () {
-  let [activities, getReturnValue] = iterateWithReturnValue(await startConversation(strategy));
+  let [activities, getReturnValue] = iterateWithReturnValue(await createStartConversation(strategy)());
   const rl = Readline.promises.createInterface(process.stdin);
 
   for (;;) {
