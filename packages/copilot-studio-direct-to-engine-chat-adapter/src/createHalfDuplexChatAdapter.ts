@@ -4,9 +4,9 @@
 
 import { type Activity } from 'botframework-directlinejs';
 
-import DirectToEngineServerSentEventsChatAdapterAPI from './DirectToEngineServerSentEventsChatAdapterAPI';
-import { type HalfDuplexChatAdapterAPI } from './types/HalfDuplexChatAdapterAPI';
-import { type HalfDuplexChatAdapterAPIStrategy } from './types/HalfDuplexChatAdapterAPIStrategy';
+import DirectToEngineServerSentEventsChatAdapterAPI from './private/DirectToEngineServerSentEventsChatAdapterAPI';
+import { type HalfDuplexChatAdapterAPI } from './private/types/HalfDuplexChatAdapterAPI';
+import { type HalfDuplexChatAdapterAPIStrategy } from './private/types/HalfDuplexChatAdapterAPIStrategy';
 
 type ExecuteTurnFunction = (activity: Activity) => AsyncGenerator<Activity, ExecuteTurnFunction, undefined>;
 type Init = ConstructorParameters<typeof DirectToEngineServerSentEventsChatAdapterAPI>[1] & {
@@ -31,7 +31,7 @@ const createExecuteTurn = (api: HalfDuplexChatAdapterAPI): ExecuteTurnFunction =
   };
 };
 
-export default function createStartConversation(strategy: HalfDuplexChatAdapterAPIStrategy, init: Init = {}) {
+export default function (strategy: HalfDuplexChatAdapterAPIStrategy, init: Init = {}) {
   return async function* (): AsyncGenerator<Activity, ExecuteTurnFunction, undefined> {
     const api = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, init);
 
