@@ -43,7 +43,7 @@ describe('with generator', () => {
       const expectation = jest.fn();
 
       for (const value of iterable) {
-        getReturnValue && expect(getReturnValue()).toBeUndefined();
+        getReturnValue && expect(getReturnValue).toThrow();
 
         expectation(value);
       }
@@ -71,7 +71,7 @@ describe('with generator', () => {
       const expectation = jest.fn();
 
       for (const value of iterable) {
-        getReturnValue && expect(getReturnValue()).toBeUndefined();
+        getReturnValue && expect(getReturnValue).toThrow();
 
         expectation(value);
 
@@ -93,7 +93,7 @@ describe('with generator', () => {
       expect(expectation).toHaveBeenNthCalledWith(1, 1);
       expect(expectation).toHaveBeenNthCalledWith(2, 2);
 
-      getReturnValue && expect(getReturnValue()).toBeUndefined();
+      getReturnValue && expect(getReturnValue).toThrow();
     });
   });
 });

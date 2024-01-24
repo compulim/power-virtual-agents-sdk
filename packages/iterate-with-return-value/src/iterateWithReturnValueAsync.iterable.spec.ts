@@ -74,7 +74,7 @@ describe('with async iterable', () => {
       const expectation = jest.fn();
 
       for await (const value of iterable) {
-        getReturnValue && expect(getReturnValue()).toBeUndefined();
+        getReturnValue && expect(getReturnValue).toThrow();
 
         expectation(value);
       }
@@ -100,7 +100,7 @@ describe('with async iterable', () => {
       const expectation = jest.fn();
 
       for await (const value of iterable) {
-        getReturnValue && expect(getReturnValue()).toBeUndefined();
+        getReturnValue && expect(getReturnValue).toThrow();
 
         expectation(value);
 

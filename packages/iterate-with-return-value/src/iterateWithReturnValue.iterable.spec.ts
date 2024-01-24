@@ -53,7 +53,7 @@ describe('with iterable', () => {
       const expectation = jest.fn();
 
       for (const value of iterable) {
-        getReturnValue && expect(getReturnValue()).toBeUndefined();
+        getReturnValue && expect(getReturnValue).toThrow();
 
         expectation(value);
       }
@@ -79,7 +79,7 @@ describe('with iterable', () => {
       const expectation = jest.fn();
 
       for (const value of iterable) {
-        getReturnValue && expect(getReturnValue()).toBeUndefined();
+        getReturnValue && expect(getReturnValue).toThrow();
 
         expectation(value);
 
