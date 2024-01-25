@@ -60,7 +60,6 @@
     "@babel/runtime-corejs3": "7.22.6",
     "botframework-directlinejs": "^0.15.4",
     "eventsource-parser": "^1.1.1",
-    "iterate-with-return-value": "^0.0.0-0",
     "p-retry": "^5.1.2",
     "powerva-turn-based-chat-adapter-framework": "^0.0.1-0",
     "uuid": "^9.0.1",
