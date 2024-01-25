@@ -10,7 +10,7 @@ import {
 } from 'powerva-turn-based-chat-adapter-framework';
 import { v4 } from 'uuid';
 
-import type { TurnBasedChatAdapterAPI } from './types/TurnBasedChatAdapterAPI';
+import type { TurnBasedChatAdapterAPI, TurnBasedChatAdapterOptions } from './types/TurnBasedChatAdapterAPI';
 import type { Activity } from 'botframework-directlinejs';
 
 type StartConversationCallback = ConstructorParameters<typeof TurnBasedChatAdapter>[0];
@@ -18,7 +18,10 @@ type StartConversationCallback = ConstructorParameters<typeof TurnBasedChatAdapt
 /**
  * Converts a turn-based chat API into a chat adapter for Bot Framework Web Chat.
  */
-export default function fromTurnBasedChatAdapterAPI(api: TurnBasedChatAdapterAPI): ChatAdapter {
+export default function fromTurnBasedChatAdapterAPI(
+  api: TurnBasedChatAdapterAPI,
+  { emitStartConversationEvent = true }: TurnBasedChatAdapterOptions = {}
+): ChatAdapter {
   let iterating = false;
   let nextSequenceID = 0;
 
@@ -72,7 +75,7 @@ export default function fromTurnBasedChatAdapterAPI(api: TurnBasedChatAdapterAPI
       action: startNewConversationAction,
       activities: startNewConversationActivities,
       conversationId
-    } = await api.startNewConversation(true, options);
+    } = await api.startNewConversation(emitStartConversationEvent, options);
 
     return {
       initialActivities: createActivityIterableIterator(

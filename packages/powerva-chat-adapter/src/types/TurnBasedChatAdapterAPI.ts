@@ -17,3 +17,7 @@ export interface TurnBasedChatAdapterAPI {
   executeTurn(conversationId: ConversationId, activity: Activity, options?: Options): Promise<ExecuteTurnResponse>;
   startNewConversation(emitStartConversationEvent: boolean, options?: Options): Promise<StartResponse>;
 }
+
+export interface TurnBasedChatAdapterOptions {
+  emitStartConversationEvent?: boolean;
+}
