@@ -70,10 +70,12 @@ export default function toDirectLineJS(
       // Half-duplex connection does not requires implicit closing.
     },
     postActivity(activity: Activity) {
-      return new Observable<ActivityId>(observer => {
-        postActivityDeferred.resolve(Object.freeze([activity, id => observer.next(id)]));
-        postActivityDeferred = new DeferredPromise();
-      });
+      return shareObservable(
+        new Observable<ActivityId>(observer => {
+          postActivityDeferred.resolve(Object.freeze([activity, id => observer.next(id)]));
+          postActivityDeferred = new DeferredPromise();
+        })
+      );
     }
   };
 }
