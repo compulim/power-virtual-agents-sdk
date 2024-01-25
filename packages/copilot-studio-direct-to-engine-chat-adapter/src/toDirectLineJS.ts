@@ -40,14 +40,14 @@ export default function toDirectLineJS(
 
       connectionStatusDeferredObservable.next(2);
 
-      let [activities, getReturnValue] = iterateWithReturnValue(startConversationPromise);
+      let [activities, getExecuteTurn] = iterateWithReturnValue(startConversationPromise);
 
       for (;;) {
         for await (const activity of activities) {
           observer.next(patchActivity(activity));
         }
 
-        const executeTurn = getReturnValue();
+        const executeTurn = getExecuteTurn();
         const [activity, callback] = await postActivityDeferred.promise;
 
         const activityId = v4() as ActivityId;
@@ -56,7 +56,7 @@ export default function toDirectLineJS(
         observer.next(patchActivity({ ...activity, id: activityId }));
         callback(activityId);
 
-        [activities, getReturnValue] = iterateWithReturnValue(executeTurnActivities);
+        [activities, getExecuteTurn] = iterateWithReturnValue(executeTurnActivities);
       }
     })();
   });
