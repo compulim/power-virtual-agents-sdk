@@ -180,7 +180,7 @@ jobs:
 
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: all exports exists'
-        run: cat ./package.json | jq '.exports | map(flatten) | flatten | .[]' | xargs -L1 test -f
+        run: cat ./package.json | jq '.exports | leaf_paths as $path | getpath($path)' | xargs -L1 test -f
 
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: all exports has "types" condition'
