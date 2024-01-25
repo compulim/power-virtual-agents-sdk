@@ -3,7 +3,6 @@
  */
 
 import { type Activity } from 'botframework-directlinejs';
-import { iterateWithReturnValue } from 'iterate-with-return-value/async';
 import {
   DeferredObservable,
   DeferredPromise,
@@ -13,6 +12,7 @@ import {
 import { v4 } from 'uuid';
 
 import type createHalfDuplexChatAdapter from './createHalfDuplexChatAdapter';
+import iterateWithReturnValue from './private/iterateWithReturnValueAsync';
 import { type ActivityId, type DirectLineJSBotConnection } from './types/DirectLineJSBotConnection';
 
 export default function toDirectLineJS(

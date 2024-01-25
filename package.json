@@ -14,7 +14,6 @@
     "test": "npm test --workspaces=true"
   },
   "workspaces": [
-    "packages/iterate-with-return-value",
     "packages/powerva-chat-adapter-test-util",
     "packages/powerva-turn-based-chat-adapter-framework",
     "packages/powerva-chat-adapter",
