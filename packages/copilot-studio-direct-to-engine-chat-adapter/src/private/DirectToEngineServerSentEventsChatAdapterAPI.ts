@@ -61,11 +61,13 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
     });
 
     const headReader = response.getReader();
-
-    // TODO: Clean up this read, data is string | undefined but JSON.parse expect string.
     const head = await headReader.read();
 
-    const { activities, conversationId } = parseStartNewConversationResponseHead(JSON.parse(head.value?.data || ''));
+    if (head.done) {
+      return iterableToAsyncIterable([]);
+    }
+
+    const { activities, conversationId } = parseStartNewConversationResponseHead(JSON.parse(head.value.data));
 
     this.#conversationId = conversationId;
 
@@ -133,7 +135,7 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
         currentResponse = await fetch(url.toString(), {
           method: 'POST',
           body: JSON.stringify(body),
-          headers: { ...headers, 'Content-Type': 'application/json' },
+          headers: { ...headers, accept: 'text/event-stream', 'content-type': 'application/json' },
           signal
         });
 
