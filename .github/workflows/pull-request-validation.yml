@@ -189,7 +189,7 @@ jobs:
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: has source maps'
         # TODO: Check if abc.js has abc.js.map, instead of just *.js.map.
-        run: compgen -G lib/**/*.js.map
+        run: compgen -G dist/**/*.js.map lib/**/*.js.map
 
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: no lib/**/*.spec.*'
