@@ -184,7 +184,7 @@ jobs:
 
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: all exports has "types" condition'
-        run: cat ./package.json | jq '.exports | map(select(.types == null)) | if length > 0 then halt_error(1) else empty end'
+        run: cat ./package.json | jq '.exports as $e | $e | leaf_paths | .[0:-1] as $p | $e | getpath($p) | if has("types") then empty else halt_error(1) end'
 
       - if: steps.prepare.outputs.is-private != 'true'
         name: 'Sanity check: has source maps'
