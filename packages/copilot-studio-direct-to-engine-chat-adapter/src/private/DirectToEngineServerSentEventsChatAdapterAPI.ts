@@ -6,6 +6,7 @@ import { type Activity } from 'botframework-directlinejs';
 import { EventSourceParserStream, type ParsedEvent } from 'eventsource-parser/stream';
 import pRetry from 'p-retry';
 import { type TelemetryClient } from 'powerva-turn-based-chat-adapter-framework';
+import { type JsonObject } from 'type-fest';
 
 import combineAsyncIterables from './combineAsyncIterables';
 import iterableToAsyncIterable from './iterableToAsyncIterable';
@@ -67,20 +68,16 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
       return iterableToAsyncIterable([]);
     }
 
-    const { activities, conversationId } = parseStartNewConversationResponseHead(JSON.parse(head.value.data));
+    const { activities, conversationId } = parseStartNewConversationResponseHead(head.value);
 
     this.#conversationId = conversationId;
 
     headReader.releaseLock();
 
     const restReadable = response.pipeThrough(
-      new TransformStream<ParsedEvent, Activity>({
-        transform({ data }, controller) {
-          if (data === 'DONE') {
-            controller.terminate();
-          }
-
-          const { activities } = parseStartNewConversationResponseRest(JSON.parse(data));
+      new TransformStream<JsonObject, Activity>({
+        transform(data, controller) {
+          const { activities } = parseStartNewConversationResponseRest(data);
 
           activities.map(controller.enqueue.bind(controller));
         }
@@ -109,13 +106,9 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
 
     return iterateReadableStream<Activity>(
       response.pipeThrough(
-        new TransformStream<ParsedEvent, Activity>({
-          transform({ data }, controller) {
-            if (data === 'DONE') {
-              controller.terminate();
-            }
-
-            const { activities } = parseExecuteTurnResponse(JSON.parse(data));
+        new TransformStream<JsonObject, Activity>({
+          transform(data, controller) {
+            const { activities } = parseExecuteTurnResponse(data);
 
             activities.map(controller.enqueue.bind(controller));
           }
@@ -127,7 +120,7 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
   async #postWithStream(
     url: URL,
     { body, headers, signal }: { body?: Record<string, unknown>; headers?: HeadersInit; signal?: AbortSignal }
-  ): Promise<ReadableStream<ParsedEvent>> {
+  ): Promise<ReadableStream<JsonObject>> {
     let currentResponse: Response;
 
     const responseBodyPromise = pRetry(
@@ -185,6 +178,19 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
 
     const responseBody = await responseBodyPromise;
 
-    return responseBody.pipeThrough(new TextDecoderStream()).pipeThrough(new EventSourceParserStream());
+    return responseBody
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(new EventSourceParserStream())
+      .pipeThrough(
+        new TransformStream<ParsedEvent, JsonObject>({
+          transform({ data }, controller) {
+            if (data === 'DONE') {
+              controller.terminate();
+            } else {
+              controller.enqueue(JSON.parse(data));
+            }
+          }
+        })
+      );
   }
 }
