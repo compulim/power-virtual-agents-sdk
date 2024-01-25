@@ -113,7 +113,7 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
               controller.terminate();
             }
 
-              const { activities } = parseExecuteTurnResponse(JSON.parse(data));
+            const { activities } = parseExecuteTurnResponse(JSON.parse(data));
 
             activities.map(controller.enqueue.bind(controller));
           }

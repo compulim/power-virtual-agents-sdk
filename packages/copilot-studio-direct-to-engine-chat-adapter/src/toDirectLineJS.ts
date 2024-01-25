@@ -18,41 +18,45 @@ import { type ActivityId, type DirectLineJSBotConnection } from './types/DirectL
 export default function toDirectLineJS(
   startConversation: ReturnType<typeof createHalfDuplexChatAdapter>
 ): DirectLineJSBotConnection {
+  let nextSequenceId = 0;
   let postActivityDeferred = new DeferredPromise<readonly [Activity, (id: ActivityId) => void]>();
+
+  // TODO: Find out why replyToId is pointing to nowhere.
+  // TODO: Can the service add "timestamp" field?
+  // TODO: Can the service echo back the activity?
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const patchActivity = ({ replyToId: _, ...activity }: Activity & { replyToId?: string }): Activity => ({
+    ...activity,
+    channelData: { ...activity.channelData, 'webchat:sequence-id': nextSequenceId++ },
+    timestamp: new Date().toISOString()
+  });
 
   const activityDeferredObservable = new DeferredObservable<Activity>(observer => {
     connectionStatusDeferredObservable.next(0);
     connectionStatusDeferredObservable.next(1);
 
-    let firstActivityReceived = false;
-
     (async function () {
-      let [activities, getReturnValue] = iterateWithReturnValue(startConversation());
+      const startConversationPromise = await startConversation();
+
+      connectionStatusDeferredObservable.next(2);
+
+      let [activities, getReturnValue] = iterateWithReturnValue(startConversationPromise);
 
       for (;;) {
         for await (const activity of activities) {
-          firstActivityReceived || connectionStatusDeferredObservable.next(2);
-
-          firstActivityReceived = true;
-
-          // TODO: Find out why replyToId is pointing to nowhere.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { replyToId: _, ...patchedActivity } = activity as any;
-
-          console.log({ activity, patchedActivity });
-
-          observer.next(patchedActivity);
+          observer.next(patchActivity(activity));
         }
 
         const executeTurn = getReturnValue();
         const [activity, callback] = await postActivityDeferred.promise;
+
         const activityId = v4() as ActivityId;
+        const executeTurnActivities = await executeTurn(activity);
 
-        [activities, getReturnValue] = iterateWithReturnValue(executeTurn(activity));
-
+        observer.next(patchActivity({ ...activity, id: activityId }));
         callback(activityId);
 
-        observer.next({ ...activity, id: activityId, timestamp: new Date().toISOString() });
+        [activities, getReturnValue] = iterateWithReturnValue(executeTurnActivities);
       }
     })();
   });
@@ -63,7 +67,7 @@ export default function toDirectLineJS(
     activity$: shareObservable(activityDeferredObservable.observable),
     connectionStatus$: shareObservable(connectionStatusDeferredObservable.observable),
     end() {
-      throw new Error('Not implemented.');
+      // Half-duplex connection does not requires implicit closing.
     },
     postActivity(activity: Activity) {
       return new Observable<ActivityId>(observer => {
