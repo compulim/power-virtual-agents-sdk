@@ -11,7 +11,7 @@ async function loadWebChatJS(): Promise<void> {
     const scriptElement = document.createElement('script');
 
     scriptElement.setAttribute('async', 'async');
-    scriptElement.setAttribute('src', 'webchat-es5.js');
+    scriptElement.setAttribute('src', 'asset/js/webchat-es5.js');
 
     scriptElement.addEventListener('load', () => resolve(), { once: true });
     scriptElement.addEventListener('error', reject, { once: true });

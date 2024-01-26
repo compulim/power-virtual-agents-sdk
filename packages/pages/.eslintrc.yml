@@ -1,2 +1,3 @@
 ignorePatterns:
+  - public/asset/js
   - public/static/js
