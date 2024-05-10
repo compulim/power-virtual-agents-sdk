@@ -1,6 +1,6 @@
 {
   "name": "copilot-studio-direct-to-engine-proxy",
-  "version": "0.0.0-0",
+  "version": "0.0.0-main.20240126-144150.226ba6d",
   "description": "Proxy for testing Direct to Engine protocol",
   "author": "Microsoft Corporation",
   "homepage": "https://github.com/microsoft/conversational-ai-chat-sdk/",

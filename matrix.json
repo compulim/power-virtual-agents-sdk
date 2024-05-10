@@ -1,0 +1,68 @@
+{
+  "packages": [
+    {
+      "name": "powerva-chat-adapter-test-util",
+      "path": "packages/powerva-chat-adapter-test-util",
+      "tarball": "powerva-chat-adapter-test-util-0.0.1-main.20231107-172158.226ba6d.tgz",
+      "version": "0.0.1-main.20231107-172158.226ba6d"
+    },
+    {
+      "name": "powerva-turn-based-chat-adapter-framework",
+      "path": "packages/powerva-turn-based-chat-adapter-framework",
+      "tarball": "powerva-turn-based-chat-adapter-framework-0.0.1-main.20240125-144152.226ba6d.tgz",
+      "version": "0.0.1-main.20240125-144152.226ba6d"
+    },
+    {
+      "name": "powerva-chat-adapter",
+      "path": "packages/powerva-chat-adapter",
+      "tarball": "powerva-chat-adapter-0.0.1-main.20240425-225506.226ba6d.tgz",
+      "version": "0.0.1-main.20240425-225506.226ba6d"
+    },
+    {
+      "name": "copilot-studio-direct-to-engine-chat-adapter",
+      "path": "packages/copilot-studio-direct-to-engine-chat-adapter",
+      "tarball": "copilot-studio-direct-to-engine-chat-adapter-0.0.0-main.20240510-092026.226ba6d.tgz",
+      "version": "0.0.0-main.20240510-092026.226ba6d"
+    },
+    {
+      "name": "copilot-studio-direct-to-engine-proxy",
+      "path": "packages/copilot-studio-direct-to-engine-proxy",
+      "tarball": "copilot-studio-direct-to-engine-proxy-0.0.0-main.20240126-144150.226ba6d.tgz",
+      "version": "0.0.0-main.20240126-144150.226ba6d"
+    },
+    {
+      "name": "pages",
+      "path": "packages/pages",
+      "tarball": "pages-0.0.0-main.20240423-201613.226ba6d.tgz",
+      "version": "0.0.0-main.20240423-201613.226ba6d"
+    }
+  ],
+  "publishingPackages": [
+    {
+      "name": "powerva-chat-adapter-test-util",
+      "path": "packages/powerva-chat-adapter-test-util",
+      "tarball": "powerva-chat-adapter-test-util-0.0.1-main.20231107-172158.226ba6d.tgz",
+      "version": "0.0.1-main.20231107-172158.226ba6d"
+    },
+    {
+      "name": "powerva-turn-based-chat-adapter-framework",
+      "path": "packages/powerva-turn-based-chat-adapter-framework",
+      "tarball": "powerva-turn-based-chat-adapter-framework-0.0.1-main.20240125-144152.226ba6d.tgz",
+      "version": "0.0.1-main.20240125-144152.226ba6d"
+    },
+    {
+      "name": "powerva-chat-adapter",
+      "path": "packages/powerva-chat-adapter",
+      "tarball": "powerva-chat-adapter-0.0.1-main.20240425-225506.226ba6d.tgz",
+      "version": "0.0.1-main.20240425-225506.226ba6d"
+    },
+    {
+      "name": "copilot-studio-direct-to-engine-chat-adapter",
+      "path": "packages/copilot-studio-direct-to-engine-chat-adapter",
+      "tarball": "copilot-studio-direct-to-engine-chat-adapter-0.0.0-main.20240510-092026.226ba6d.tgz",
+      "version": "0.0.0-main.20240510-092026.226ba6d"
+    }
+  ],
+  "publishToNPM": true,
+  "publishToGitHubRelease": false
+}
