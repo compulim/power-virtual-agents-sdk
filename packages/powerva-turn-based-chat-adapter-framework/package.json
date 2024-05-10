@@ -1,6 +1,6 @@
 {
   "name": "powerva-turn-based-chat-adapter-framework",
-  "version": "0.0.1-0",
+  "version": "0.0.1-main.20240125-144152.6874761",
   "description": "Framework for building a turn-based chat adapter for using Power Virtual Agents chatbots.",
   "author": "Microsoft Corporation",
   "homepage": "https://github.com/microsoft/conversational-ai-chat-sdk/",
@@ -91,7 +91,7 @@
     "eslint-plugin-react": "^7.33.0",
     "jest": "^29.6.2",
     "jest-environment-jsdom": "^29.6.2",
-    "powerva-chat-adapter-test-util": "^0.0.1-0",
+    "powerva-chat-adapter-test-util": "^0.0.1-main.20231107-172158.6874761",
     "prettier": "^3.0.0",
     "typescript": "^5.1.6"
   },
