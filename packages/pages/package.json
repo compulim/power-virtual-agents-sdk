@@ -1,6 +1,6 @@
 {
   "name": "pages",
-  "version": "0.0.0-0",
+  "version": "0.0.0-main.20240423-201613.2948f7e",
   "private": true,
   "description": "",
   "author": "Microsoft Corporation",
@@ -27,10 +27,10 @@
   },
   "dependencies": {
     "botframework-webchat": "^4.15.8",
-    "copilot-studio-direct-to-engine-chat-adapter": "^0.0.0-0",
+    "copilot-studio-direct-to-engine-chat-adapter": "^0.0.0-main.20240510-125410.2948f7e",
     "jwt-decode": "^3.1.2",
     "path-to-regexp": "^6.2.2",
-    "powerva-chat-adapter": "^0.0.1-0",
+    "powerva-chat-adapter": "^0.0.1-main.20240425-225506.2948f7e",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "use-ref-from": "^0.0.2"
