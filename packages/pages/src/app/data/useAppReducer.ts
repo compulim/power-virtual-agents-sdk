@@ -149,7 +149,11 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
       state = {
         ...state,
         type:
-          action.payload === 'published bot' || action.payload === 'test canvas bot' ? action.payload : 'prebuilt bot'
+          action.payload === 'published bot' ||
+          action.payload === 'test canvas bot' ||
+          action.payload === 'anywhere bot'
+            ? action.payload
+            : 'prebuilt bot'
       };
     }
 
@@ -211,7 +215,8 @@ export default function useAppReducer(): readonly [State, Readonly<DispatchActio
   const setType = useCallback(
     (type: BotType) =>
       dispatch({
-        payload: type === 'published bot' || type === 'test canvas bot' ? type : 'prebuilt bot',
+        payload:
+          type === 'published bot' || type === 'test canvas bot' || type === 'anywhere bot' ? type : 'prebuilt bot',
         type: 'SET_TYPE'
       }),
     [dispatch]
