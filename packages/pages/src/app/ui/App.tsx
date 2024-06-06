@@ -8,6 +8,7 @@ import CredentialForm from './CredentialForm';
 import WebChatViaPrebuiltBot from './WebChatViaPrebuiltBot';
 import WebChatViaPublishedBot from './WebChatViaPublishedBot';
 import WebChatViaTestCanvasBot from './WebChatViaTestCanvasBot';
+import WebChatViaAnywhereBot from './WebChatViaAnywhereBot';
 
 type SubmittedCredential = {
   botIdentifier: string;
@@ -137,6 +138,63 @@ export default memo(function App() {
       tokenRef
     ]
   );
+  const renderWebChat = (submittedCredential: SubmittedCredential) => {
+    switch (type) {
+      case 'published bot':
+        return (
+          submittedCredential.botSchema && (
+            <WebChatViaPublishedBot
+              botSchema={submittedCredential.botSchema}
+              emitStartConversationEvent={emitStartConversationEvent}
+              environmentID={submittedCredential.environmentID}
+              hostnameSuffix={submittedCredential.hostnameSuffix}
+              key={submittedCredential.key}
+              token={submittedCredential.token}
+              transport={submittedCredential.transport}
+            />
+          )
+        );
+      case 'test canvas bot':
+        return (
+          submittedCredential.islandURI && (
+            <WebChatViaTestCanvasBot
+              botId={submittedCredential.botIdentifier}
+              deltaToken={submittedCredential.deltaToken}
+              emitStartConversationEvent={emitStartConversationEvent}
+              environmentId={submittedCredential.environmentID}
+              islandURI={submittedCredential.islandURI}
+              key={submittedCredential.key}
+              token={submittedCredential.token}
+              transport={submittedCredential.transport}
+            />
+          )
+        );
+      case 'anywhere bot':
+        return (
+          submittedCredential.botIdentifier && (
+            <WebChatViaAnywhereBot
+              botIdentifier={submittedCredential.botIdentifier}
+              islandURI={submittedCredential.islandURI || ''}
+              emitStartConversationEvent={emitStartConversationEvent}
+            />
+          )
+        );
+      default:
+        return (
+          submittedCredential.botIdentifier && (
+            <WebChatViaPrebuiltBot
+              botIdentifier={submittedCredential.botIdentifier}
+              emitStartConversationEvent={emitStartConversationEvent}
+              environmentID={submittedCredential.environmentID}
+              hostnameSuffix={submittedCredential.hostnameSuffix}
+              key={submittedCredential.key}
+              token={submittedCredential.token}
+              transport={submittedCredential.transport}
+            />
+          )
+        );
+    }
+  };
 
   return (
     <Fragment>
@@ -158,43 +216,7 @@ export default memo(function App() {
         onReset={handleReset}
         onSubmit={handleSubmit}
       />
-      {!!submittedCredential &&
-        (type === 'published bot'
-          ? submittedCredential.botSchema && (
-              <WebChatViaPublishedBot
-                botSchema={submittedCredential.botSchema}
-                emitStartConversationEvent={emitStartConversationEvent}
-                environmentID={submittedCredential.environmentID}
-                hostnameSuffix={submittedCredential.hostnameSuffix}
-                key={submittedCredential.key}
-                token={submittedCredential.token}
-                transport={submittedCredential.transport}
-              />
-            )
-          : type === 'test canvas bot'
-          ? submittedCredential.islandURI && (
-              <WebChatViaTestCanvasBot
-                botId={submittedCredential.botIdentifier}
-                deltaToken={submittedCredential.deltaToken}
-                emitStartConversationEvent={emitStartConversationEvent}
-                environmentId={submittedCredential.environmentID}
-                islandURI={submittedCredential.islandURI}
-                key={submittedCredential.key}
-                token={submittedCredential.token}
-                transport={submittedCredential.transport}
-              />
-            )
-          : submittedCredential.botIdentifier && (
-              <WebChatViaPrebuiltBot
-                botIdentifier={submittedCredential.botIdentifier}
-                emitStartConversationEvent={emitStartConversationEvent}
-                environmentID={submittedCredential.environmentID}
-                hostnameSuffix={submittedCredential.hostnameSuffix}
-                key={submittedCredential.key}
-                token={submittedCredential.token}
-                transport={submittedCredential.transport}
-              />
-            ))}
+      {!!submittedCredential && renderWebChat(submittedCredential)}
     </Fragment>
   );
 });

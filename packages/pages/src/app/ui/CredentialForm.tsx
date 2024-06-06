@@ -81,7 +81,11 @@ export default memo(function CredentialForm({
     }) => {
       const transport: Transport = transportRef.current === 'server sent events' ? transportRef.current : 'rest';
       const type: BotType =
-        typeRef.current === 'published bot' || typeRef.current === 'test canvas bot' ? typeRef.current : 'prebuilt bot';
+        typeRef.current === 'published bot' ||
+        typeRef.current === 'test canvas bot' ||
+        typeRef.current === 'anywhere bot'
+          ? typeRef.current
+          : 'prebuilt bot';
 
       onChangeRef.current?.({
         botIdentifier: botIdentifierRef.current || '',
@@ -157,7 +161,10 @@ export default memo(function CredentialForm({
 
   const handleTypeChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
     ({ currentTarget: { value } }) =>
-      dispatchChange({ type: value === 'published bot' || value === 'test canvas bot' ? value : 'prebuilt bot' }),
+      dispatchChange({
+        type:
+          value === 'published bot' || value === 'test canvas bot' || value === 'anywhere bot' ? value : 'prebuilt bot'
+      }),
     [dispatchChange]
   );
 
@@ -189,7 +196,7 @@ export default memo(function CredentialForm({
         <dd>
           <label>
             <input
-              checked={type !== 'published bot' && type !== 'test canvas bot'}
+              checked={type === 'prebuilt bot'}
               name="bot-type"
               onChange={handleTypeChange}
               type="radio"
@@ -220,6 +227,18 @@ export default memo(function CredentialForm({
               value="test canvas bot"
             />
             Test canvas bot
+          </label>
+        </dd>
+        <dd>
+          <label>
+            <input
+              checked={type === 'anywhere bot'}
+              name="bot-type"
+              onChange={handleTypeChange}
+              type="radio"
+              value="anywhere bot"
+            />
+            Anywhere bot
           </label>
         </dd>
         <dt>Transport</dt>
@@ -259,7 +278,7 @@ export default memo(function CredentialForm({
             Emit start conversation event
           </label>
         </dd>
-        {type === 'test canvas bot' ? (
+        {type === 'test canvas bot' || type === 'anywhere bot' ? (
           <label>
             <dt>Island URI</dt>
             <dd>
@@ -274,12 +293,14 @@ export default memo(function CredentialForm({
             </dd>
           </label>
         )}
-        <label>
-          <dt>Environment ID</dt>
-          <dd>
-            <input onChange={handleEnvironmentIDChange} required type="text" value={environmentID || ''} />
-          </dd>
-        </label>
+        {type !== 'anywhere bot' && (
+          <label>
+            <dt>Environment ID</dt>
+            <dd>
+              <input onChange={handleEnvironmentIDChange} required type="text" value={environmentID || ''} />
+            </dd>
+          </label>
+        )}
         {type === 'published bot' ? (
           <label>
             <dt>Bot schema</dt>
@@ -295,19 +316,21 @@ export default memo(function CredentialForm({
             </dd>
           </label>
         )}
-        <label>
-          <dt>Token</dt>
-          <dd>
-            <input
-              autoComplete="off"
-              onChange={handleTokenChange}
-              required
-              title={tokenTooltip}
-              type="password"
-              value={token || ''}
-            />
-          </dd>
-        </label>
+        {type !== 'anywhere bot' && (
+          <label>
+            <dt>Token</dt>
+            <dd>
+              <input
+                autoComplete="off"
+                onChange={handleTokenChange}
+                required
+                title={tokenTooltip}
+                type="password"
+                value={token || ''}
+              />
+            </dd>
+          </label>
+        )}
         {type === 'test canvas bot' && (
           <label>
             <dt>Delta token</dt>
