@@ -1,10 +1,10 @@
-import type { Activity } from 'botframework-directlinejs';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
 import type { Strategy } from '../../../types/Strategy';
 import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
 import asyncIterableToArray from '../../asyncIterableToArray';
+import type { Activity } from '../../../types/Activity';
 import type { BotResponse } from '../../types/BotResponse';
 import { parseConversationId } from '../../types/ConversationId';
 import type { DefaultHttpResponseResolver } from '../../types/DefaultHttpResponseResolver';
@@ -20,7 +20,7 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-describe.each(['rest' as const, 'server sent events' as const])('Using "%s" transport', transport => {
+describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transport => {
   let strategy: Strategy;
 
   beforeEach(() => {
@@ -101,15 +101,7 @@ data: end
         >;
 
         beforeEach(() => {
-          if (transport === 'rest') {
-            httpPostConversation.mockImplementationOnce(() =>
-              HttpResponse.json({
-                action: 'waiting',
-                activities: [{ from: { id: 'bot' }, text: 'Aloha!', type: 'message' }],
-                conversationId: parseConversationId('c-00001')
-              } satisfies BotResponse)
-            );
-          } else if (transport === 'server sent events') {
+          if (transport === 'auto') {
             httpPostConversation.mockImplementationOnce(
               () =>
                 new HttpResponse(
@@ -122,6 +114,14 @@ data: end
 `),
                   { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
                 )
+            );
+          } else if (transport === 'rest') {
+            httpPostConversation.mockImplementationOnce(() =>
+              HttpResponse.json({
+                action: 'waiting',
+                activities: [{ from: { id: 'bot' }, text: 'Aloha!', type: 'message' }],
+                conversationId: parseConversationId('c-00001')
+              } satisfies BotResponse)
             );
           }
 

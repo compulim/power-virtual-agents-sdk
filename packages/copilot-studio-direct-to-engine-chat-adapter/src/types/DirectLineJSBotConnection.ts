@@ -1,6 +1,8 @@
-import { type Activity, type ConnectionStatus } from 'botframework-directlinejs';
+import { type ConnectionStatus } from 'botframework-directlinejs';
 import { type Observable } from 'powerva-turn-based-chat-adapter-framework';
 import { type Tagged } from 'type-fest';
+
+import { type Activity } from '../types/Activity';
 
 export type ActivityId = Tagged<string, 'ActivityId'>;
 

@@ -16,7 +16,7 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-describe.each([['rest' as const], ['server sent events' as const]])('Using "%s" transport', transport => {
+describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transport => {
   let strategy: Strategy;
 
   beforeEach(() => {

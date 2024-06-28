@@ -1,4 +1,3 @@
-import { type Activity } from 'botframework-directlinejs';
 import { type JsonObject } from 'type-fest';
 import {
   any,
@@ -15,6 +14,7 @@ import {
   type StringSchema
 } from 'valibot';
 
+import { type Activity } from '../../types/Activity';
 import { type ConversationIdSchema } from './ConversationId';
 
 export const BotResponseSchema = object({

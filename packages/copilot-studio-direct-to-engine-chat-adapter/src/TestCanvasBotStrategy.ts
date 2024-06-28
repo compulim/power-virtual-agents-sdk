@@ -25,8 +25,8 @@ const TestCanvasBotStrategyInitSchema = () =>
       getToken: special(input => typeof input === 'function') as SpecialSchema<() => Promise<string>>,
       islandURI: special(input => input instanceof URL) as SpecialSchema<URL>,
       transport: union([
-        string([value('rest')]) as StringSchema<'rest'>,
-        string([value('server sent events')]) as StringSchema<'server sent events'>
+        string([value('auto')]) as StringSchema<'auto'>,
+        string([value('rest')]) as StringSchema<'rest'>
       ])
     },
     never()

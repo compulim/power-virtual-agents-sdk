@@ -7,6 +7,8 @@ import createHalfDuplexChatAdapter, {
   type TurnGenerator
 } from './createHalfDuplexChatAdapter';
 import toDirectLineJS from './toDirectLineJS';
+import { type Activity } from './types/Activity';
+import { type Attachment } from './types/Attachment';
 import { type DirectLineJSBotConnection } from './types/DirectLineJSBotConnection';
 import { type Strategy, type StrategyRequestInit } from './types/Strategy';
 import { type Transport } from './types/Transport';
@@ -20,6 +22,8 @@ export {
 };
 
 export type {
+  Activity,
+  Attachment,
   CreateHalfDuplexChatAdapterInit,
   DirectLineJSBotConnection,
   ExecuteTurnFunction,

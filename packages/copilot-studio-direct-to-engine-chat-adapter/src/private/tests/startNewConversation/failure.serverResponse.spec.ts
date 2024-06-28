@@ -1,8 +1,8 @@
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
-import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
 import type { Strategy } from '../../../types/Strategy';
+import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
 import type { DefaultHttpResponseResolver } from '../../types/DefaultHttpResponseResolver';
 import type { JestMockOf } from '../../types/JestMockOf';
 
@@ -16,7 +16,7 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-describe.each([['rest' as const], ['server sent events' as const]])('Using "%s" transport', transport => {
+describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transport => {
   let strategy: Strategy;
 
   beforeEach(() => {

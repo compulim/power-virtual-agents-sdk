@@ -1,4 +1,4 @@
-import type { Activity, ConnectionStatus } from 'botframework-directlinejs';
+import type { ConnectionStatus } from 'botframework-directlinejs';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
@@ -9,6 +9,7 @@ import { parseConversationId } from '../../private/types/ConversationId';
 import type { DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
 import type { JestMockOf } from '../../private/types/JestMockOf';
 import toDirectLineJS from '../../toDirectLineJS';
+import type { Activity } from '../../types/Activity';
 import type { DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
 import type { Strategy } from '../../types/Strategy';
 
@@ -25,7 +26,7 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-describe.each(['rest' as const, 'server sent events' as const])('Using "%s" transport', transport => {
+describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transport => {
   let strategy: Strategy;
 
   beforeEach(() => {
@@ -81,7 +82,27 @@ describe.each(['rest' as const, 'server sent events' as const])('Using "%s" tran
       let directLineJS: DirectLineJSBotConnection;
 
       beforeEach(() => {
-        if (transport === 'rest') {
+        if (transport === 'auto') {
+          httpPostConversation.mockImplementationOnce(
+            () =>
+              new HttpResponse(
+                Buffer.from(`event: activity
+data: { "from": { "id": "bot" }, "text": "Hello, World!", "type": "message" }
+
+event: activity
+data: { "from": { "id": "bot" }, "text": "Aloha!", "type": "message" }
+
+event: activity
+data: { "from": { "id": "bot" }, "text": "您好！", "type": "message" }
+
+event: end
+data: end
+
+`),
+                { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
+              )
+          );
+        } else if (transport === 'rest') {
           httpPostConversation.mockImplementationOnce(() =>
             HttpResponse.json({
               action: 'continue',
@@ -102,26 +123,6 @@ describe.each(['rest' as const, 'server sent events' as const])('Using "%s" tran
               action: 'waiting',
               activities: [{ from: { id: 'bot' }, text: '您好！', type: 'message' }]
             } satisfies BotResponse)
-          );
-        } else if (transport === 'server sent events') {
-          httpPostConversation.mockImplementationOnce(
-            () =>
-              new HttpResponse(
-                Buffer.from(`event: activity
-data: { "from": { "id": "bot" }, "text": "Hello, World!", "type": "message" }
-
-event: activity
-data: { "from": { "id": "bot" }, "text": "Aloha!", "type": "message" }
-
-event: activity
-data: { "from": { "id": "bot" }, "text": "您好！", "type": "message" }
-
-event: end
-data: end
-
-`),
-                { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
-              )
           );
         }
 
@@ -164,12 +165,12 @@ data: end
           test('with hash of "#1"', () =>
             expect(new URL(httpPostConversation.mock.calls[0][0].request.url)).toHaveProperty('hash', '#1'));
 
-          if (transport === 'server sent events') {
+          if (transport === 'auto') {
             test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
               expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe(
                 'text/event-stream,application/json;q=0.9'
               ));
-          } else {
+          } else if (transport === 'rest') {
             test('with header "Accept" of "application/json"', () =>
               expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
           }
@@ -258,7 +259,27 @@ data: end
           let postActivityObserver: JestMockOf<(id: string) => void>;
 
           beforeEach(() => {
-            if (transport === 'rest') {
+            if (transport === 'auto') {
+              httpPostExecute.mockImplementationOnce(
+                () =>
+                  new HttpResponse(
+                    Buffer.from(`event: activity
+data: { "from": { "id": "bot" }, "text": "Good morning!", "type": "message" }
+
+event: activity
+data: { "from": { "id": "bot" }, "text": "Goodbye!", "type": "message" }
+
+event: activity
+data: { "from": { "id": "bot" }, "text": "再見！", "type": "message" }
+
+event: end
+data: end
+
+`),
+                    { headers: { 'content-type': 'text/event-stream' } }
+                  )
+              );
+            } else if (transport === 'rest') {
               httpPostExecute.mockImplementationOnce(() =>
                 HttpResponse.json({
                   action: 'continue',
@@ -278,26 +299,6 @@ data: end
                   action: 'waiting',
                   activities: [{ from: { id: 'bot' }, text: '再見！', type: 'message' }]
                 } satisfies BotResponse)
-              );
-            } else if (transport === 'server sent events') {
-              httpPostExecute.mockImplementationOnce(
-                () =>
-                  new HttpResponse(
-                    Buffer.from(`event: activity
-data: { "from": { "id": "bot" }, "text": "Good morning!", "type": "message" }
-
-event: activity
-data: { "from": { "id": "bot" }, "text": "Goodbye!", "type": "message" }
-
-event: activity
-data: { "from": { "id": "bot" }, "text": "再見！", "type": "message" }
-
-event: end
-data: end
-
-`),
-                    { headers: { 'content-type': 'text/event-stream' } }
-                  )
               );
             }
 
@@ -339,12 +340,12 @@ data: end
               test('with hash of "#2"', () =>
                 expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty('hash', '#2'));
 
-              if (transport === 'server sent events') {
+              if (transport === 'auto') {
                 test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
                   expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
                     'text/event-stream,application/json;q=0.9'
                   ));
-              } else {
+              } else if (transport === 'rest') {
                 test('with header "Accept" of "application/json"', () =>
                   expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
               }
@@ -437,6 +438,130 @@ data: end
                 timestamp: expect.any(String),
                 type: 'message'
               }));
+
+            describe('when post an attachment', () => {
+              let postActivityObserver: JestMockOf<(id: string) => void>;
+
+              beforeEach(() => {
+                if (transport === 'auto') {
+                  httpPostExecute.mockImplementationOnce(
+                    () =>
+                      new HttpResponse(
+                        Buffer.from(`event: activity
+data: { "from": { "id": "bot" }, "text": "Got it!", "type": "message" }
+
+event: end
+data: end
+
+`),
+                        { headers: { 'content-type': 'text/event-stream' } }
+                      )
+                  );
+                } else if (transport === 'rest') {
+                  httpPostExecute.mockImplementationOnce(() =>
+                    HttpResponse.json({
+                      action: 'continue',
+                      activities: [{ from: { id: 'bot' }, text: 'Got it!', type: 'message' }]
+                    } satisfies BotResponse)
+                  );
+                }
+
+                postActivityObserver = jest.fn();
+
+                const buffer = new ArrayBuffer(3);
+                const view = new Uint8Array(buffer);
+
+                view.set([1, 2, 3]);
+
+                const blobURL = URL.createObjectURL(new Blob([buffer]));
+
+                directLineJS
+                  .postActivity({
+                    attachments: [
+                      {
+                        contentType: 'applciation/octet-stream',
+                        contentUrl: blobURL
+                      }
+                    ],
+                    from: { id: 'u-00001' },
+                    text: 'Here is the document.',
+                    type: 'message'
+                  })
+                  .subscribe(postActivityObserver);
+              });
+
+              describe('when activity arrive', () => {
+                beforeEach(async () => {
+                  await activitiesQueue.promise;
+                });
+
+                test('should call the postActivity observer', () =>
+                  expect(postActivityObserver).toHaveBeenCalledTimes(1));
+
+                test.only('should observe the echoback activity', () =>
+                  expect(activitiesObserver).toHaveBeenNthCalledWith(8, {
+                    attachments: [
+                      {
+                        contentType: 'application/octet-stream',
+                        contentUrl: 'data:'
+                      }
+                    ],
+                    channelData: expect.anything(),
+                    from: { id: 'u-00001' },
+                    id: postActivityObserver.mock.calls[0][0],
+                    text: 'Here is the document.',
+                    timestamp: expect.any(String),
+                    type: 'message'
+                  }));
+
+                describe('should have POST to /conversations/c-00001', () => {
+                  test('once', () => expect(httpPostExecute).toHaveBeenCalledTimes(1));
+                  test('with query "api" of "execute"', () =>
+                    expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty(
+                      'search',
+                      '?api=execute'
+                    ));
+                  test('with hash of "#2"', () =>
+                    expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty('hash', '#2'));
+
+                  if (transport === 'auto') {
+                    test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
+                      expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
+                        'text/event-stream,application/json;q=0.9'
+                      ));
+                  } else if (transport === 'rest') {
+                    test('with header "Accept" of "application/json"', () =>
+                      expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
+                  }
+
+                  test('with header "Content-Type" of "application/json"', () =>
+                    expect(httpPostExecute.mock.calls[0][0].request.headers.get('content-type')).toBe(
+                      'application/json'
+                    ));
+                  test('with header "x-dummy" of "dummy"', () =>
+                    expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
+                  test('with header "x-ms-conversationid" of "c-00001"', () =>
+                    expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe(
+                      'c-00001'
+                    ));
+                  test('with JSON body of activity and { dummy: "dummy" }', () =>
+                    expect(httpPostExecute.mock.calls[0][0].request.json()).resolves.toEqual({
+                      attachments: [{ contentType: 'application/octet-stream', contentUrl: 'data:' }],
+                      activity: { from: { id: 'u-00001' }, text: 'Here is the document.', type: 'message' },
+                      dummy: 'dummy'
+                    }));
+                });
+
+                test('should observe the fourth activity', () =>
+                  expect(activitiesObserver).toHaveBeenNthCalledWith(5, {
+                    channelData: expect.anything(),
+                    from: { id: 'bot' },
+                    text: 'Got it!',
+                    timestamp: expect.any(String),
+                    type: 'message'
+                  }));
+              });
+            });
           });
         });
       });

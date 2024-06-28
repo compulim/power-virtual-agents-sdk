@@ -1,7 +1,7 @@
-import type { Activity } from 'botframework-directlinejs';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
+import type { Activity } from '../../../types/Activity';
 import type { Strategy } from '../../../types/Strategy';
 import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
 import asyncIterableToArray from '../../asyncIterableToArray';
@@ -20,7 +20,7 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-describe.each(['rest' as const, 'server sent events' as const])('Using "%s" transport', transport => {
+describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transport => {
   let strategy: Strategy;
 
   beforeEach(() => {

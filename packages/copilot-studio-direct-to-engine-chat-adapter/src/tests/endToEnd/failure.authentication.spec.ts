@@ -1,4 +1,4 @@
-import type { Activity, ConnectionStatus } from 'botframework-directlinejs';
+import type { ConnectionStatus } from 'botframework-directlinejs';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
@@ -7,6 +7,7 @@ import DeferredQueue from '../../private/DeferredQueue';
 import type { DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
 import type { JestMockOf } from '../../private/types/JestMockOf';
 import toDirectLineJS from '../../toDirectLineJS';
+import type { Activity } from '../../types/Activity';
 import type { DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
 import type { Strategy } from '../../types/Strategy';
 
@@ -23,7 +24,7 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-describe.each(['rest' as const, 'server sent events' as const])('Using "%s" transport', transport => {
+describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transport => {
   let strategy: Strategy;
 
   beforeEach(() => {

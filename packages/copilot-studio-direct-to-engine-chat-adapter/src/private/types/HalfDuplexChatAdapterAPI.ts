@@ -1,4 +1,4 @@
-import { type Activity } from 'botframework-directlinejs';
+import { type Activity } from '../../types/Activity';
 
 export type StartNewConversationInit = {
   emitStartConversationEvent: boolean;

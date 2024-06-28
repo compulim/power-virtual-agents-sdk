@@ -1,7 +1,7 @@
-import type { Activity } from 'botframework-directlinejs';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
+import type { Activity } from '../../types/Activity';
 import type { Strategy } from '../../types/Strategy';
 import DirectToEngineServerSentEventsChatAdapterAPI from '../DirectToEngineServerSentEventsChatAdapterAPI';
 import type { BotResponse } from '../types/BotResponse';
@@ -19,7 +19,7 @@ beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-describe.each(['rest' as const, 'server sent events' as const])('Using "%s" transport', transport => {
+describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transport => {
   let strategy: Strategy;
 
   beforeEach(() => {
@@ -74,15 +74,7 @@ describe.each(['rest' as const, 'server sent events' as const])('Using "%s" tran
         let iteratorResult: IteratorResult<Activity>;
 
         beforeEach(async () => {
-          if (transport === 'rest') {
-            httpPostConversation.mockImplementationOnce(() =>
-              HttpResponse.json({
-                action: 'continue',
-                activities: [{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }],
-                conversationId: parseConversationId('c-00001')
-              } satisfies BotResponse)
-            );
-          } else if (transport === 'server sent events') {
+          if (transport === 'auto') {
             httpPostConversation.mockImplementationOnce(
               () =>
                 new HttpResponse(
@@ -102,6 +94,14 @@ data: end
                   { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
                 )
             );
+          } else if (transport === 'rest') {
+            httpPostConversation.mockImplementationOnce(() =>
+              HttpResponse.json({
+                action: 'continue',
+                activities: [{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }],
+                conversationId: parseConversationId('c-00001')
+              } satisfies BotResponse)
+            );
           }
 
           iteratorResult = await startNewConversationResult.next();
@@ -116,12 +116,12 @@ data: end
           test('with hash of "#1"', () =>
             expect(new URL(httpPostConversation.mock.calls[0][0].request.url)).toHaveProperty('hash', '#1'));
 
-          if (transport === 'server sent events') {
+          if (transport === 'auto') {
             test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
               expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe(
                 'text/event-stream,application/json;q=0.9'
               ));
-          } else {
+          } else if (transport === 'rest') {
             test('with header "Accept" of "application/json"', () =>
               expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
           }
@@ -277,14 +277,7 @@ data: end
                   let iteratorResult: IteratorResult<Activity>;
 
                   beforeEach(async () => {
-                    if (transport === 'rest') {
-                      httpPostExecute.mockImplementationOnce(() =>
-                        HttpResponse.json({
-                          action: 'continue',
-                          activities: [{ from: { id: 'bot' }, text: 'Good morning!', type: 'message' }]
-                        } satisfies BotResponse)
-                      );
-                    } else if (transport === 'server sent events') {
+                    if (transport === 'auto') {
                       httpPostExecute.mockImplementationOnce(
                         () =>
                           new HttpResponse(
@@ -304,6 +297,13 @@ data: end
                             { headers: { 'content-type': 'text/event-stream' } }
                           )
                       );
+                    } else if (transport === 'rest') {
+                      httpPostExecute.mockImplementationOnce(() =>
+                        HttpResponse.json({
+                          action: 'continue',
+                          activities: [{ from: { id: 'bot' }, text: 'Good morning!', type: 'message' }]
+                        } satisfies BotResponse)
+                      );
                     }
 
                     iteratorResult = await executeTurnResult.next();
@@ -321,12 +321,12 @@ data: end
                     test('with hash of "#2"', () =>
                       expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty('hash', '#2'));
 
-                    if (transport === 'server sent events') {
+                    if (transport === 'auto') {
                       test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
                         expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
                           'text/event-stream,application/json;q=0.9'
                         ));
-                    } else {
+                    } else if (transport === 'rest') {
                       test('with header "Accept" of "application/json"', () =>
                         expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
                           'application/json'
