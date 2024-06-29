@@ -1,4 +1,5 @@
-import { type Activity } from 'botframework-directlinejs';
+import { encode as base64Encode } from 'base64-arraybuffer';
+import { onErrorResumeNext } from 'on-error-resume-next';
 import {
   DeferredObservable,
   DeferredPromise,
@@ -7,8 +8,10 @@ import {
 } from 'powerva-turn-based-chat-adapter-framework';
 import { v4 } from 'uuid';
 
-import type { ExecuteTurnFunction, TurnGenerator } from './createHalfDuplexChatAdapter';
-import iterateWithReturnValue from './private/iterateWithReturnValue';
+import { asyncGeneratorWithLastValue } from 'iter-fest';
+import type { TurnGenerator } from './createHalfDuplexChatAdapter';
+import { type Activity } from './types/Activity';
+import { type Attachment } from './types/Attachment';
 import { type ActivityId, type DirectLineJSBotConnection } from './types/DirectLineJSBotConnection';
 
 function once(fn: () => Promise<void>): () => Promise<void>;
@@ -45,7 +48,6 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
       connectionStatusDeferredObservable.next(0);
       connectionStatusDeferredObservable.next(1);
 
-      let activities: AsyncIterable<Activity>;
       let turnGenerator: TurnGenerator = halfDuplexChatAdapter;
       let handleAcknowledgementOnce: () => Promise<void> | void = once(async () => {
         connectionStatusDeferredObservable.next(2);
@@ -54,11 +56,9 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
 
       try {
         for (;;) {
-          let getExecuteTurn: () => ExecuteTurnFunction;
+          const iterator = asyncGeneratorWithLastValue(turnGenerator);
 
-          [activities, getExecuteTurn] = iterateWithReturnValue(turnGenerator);
-
-          for await (const activity of activities) {
+          for await (const activity of iterator) {
             await handleAcknowledgementOnce();
 
             observer.next(patchActivity(activity));
@@ -67,10 +67,39 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
           // If no activities received from bot, we should still acknowledge.
           await handleAcknowledgementOnce();
 
-          const executeTurn = getExecuteTurn();
+          const executeTurn = iterator.lastValue();
           const [activity, callback] = await postActivityDeferred.promise;
 
           postActivityDeferred = new DeferredPromise();
+
+          // Patch `activity.attachments[].contentUrl` into Data URI if it was Blob URL.
+          if (activity.type === 'message' && activity.attachments) {
+            activity.attachments = await Promise.all(
+              activity.attachments.map(async (attachment: Attachment) => {
+                if ('contentUrl' in attachment) {
+                  const { contentUrl } = attachment;
+
+                  // Ignore malformed URL.
+                  if (onErrorResumeNext(() => new URL(contentUrl).protocol) === 'blob:') {
+                    // Only allow fetching blob URLs.
+                    const res = await fetch(contentUrl);
+
+                    if (!res.ok) {
+                      throw new Error('Failed to fetch attachment of blob URL.');
+                    }
+
+                    // FileReader.readAsDataURL() is not available in Node.js.
+                    return Object.freeze({
+                      ...attachment,
+                      contentUrl: `data:;base64,${base64Encode(await res.arrayBuffer())}`
+                    });
+                  }
+                }
+
+                return attachment;
+              })
+            );
+          }
 
           turnGenerator = executeTurn(activity);
 

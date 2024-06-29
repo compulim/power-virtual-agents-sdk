@@ -5,7 +5,7 @@ import pRetry from 'p-retry';
 import { type Activity } from '../types/Activity';
 import { type Strategy } from '../types/Strategy';
 import { type Transport } from '../types/Transport';
-import iterateReadableStream from './iterateReadableStream';
+import { readableStreamValues } from 'iter-fest';
 import { resolveURLWithQueryAndHash } from './resolveURLWithQueryAndHash';
 import { parseBotResponse } from './types/BotResponse';
 import { parseConversationId, type ConversationId } from './types/ConversationId';
@@ -220,7 +220,7 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
                 );
 
               return (async function* () {
-                for await (const activity of iterateReadableStream(readableStream)) {
+                for await (const activity of readableStreamValues(readableStream)) {
                   yield activity;
                 }
 

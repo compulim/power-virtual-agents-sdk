@@ -1,5 +1,3 @@
 import { type Attachment as DirectLineJSAttachment } from 'botframework-directlinejs';
 
-export type Attachment = DirectLineJSAttachment & {
-  content?: ArrayBuffer | undefined;
-};
+export type Attachment = DirectLineJSAttachment;

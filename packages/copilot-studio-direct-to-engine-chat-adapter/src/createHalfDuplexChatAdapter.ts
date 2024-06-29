@@ -1,7 +1,6 @@
-import { type Activity } from 'botframework-directlinejs';
-
 import DirectToEngineServerSentEventsChatAdapterAPI from './private/DirectToEngineServerSentEventsChatAdapterAPI';
 import { type HalfDuplexChatAdapterAPI } from './private/types/HalfDuplexChatAdapterAPI';
+import { type Activity } from './types/Activity';
 import { type Strategy } from './types/Strategy';
 
 type ExecuteTurnFunction = (activity: Activity) => TurnGenerator;
@@ -33,10 +32,8 @@ const createExecuteTurn = (api: HalfDuplexChatAdapterAPI): ExecuteTurnFunction =
 
     obsoleted = true;
 
-    const activities = api.executeTurn(activity);
-
     return (async function* () {
-      yield* activities;
+      yield* api.executeTurn(activity);
 
       return createExecuteTurn(api);
     })();
@@ -53,12 +50,10 @@ export default function createHalfDuplexChatAdapter(
       telemetry: init.telemetry
     });
 
-    const activities = api.startNewConversation({
+    yield* api.startNewConversation({
       emitStartConversationEvent: init.emitStartConversationEvent ?? true,
       locale: init.locale
     });
-
-    yield* activities;
 
     return createExecuteTurn(api);
   })();

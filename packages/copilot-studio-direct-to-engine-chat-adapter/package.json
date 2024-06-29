@@ -56,8 +56,10 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
+    "base64-arraybuffer": "^1.0.2",
     "eventsource-parser": "^1.1.1",
     "iter-fest": "^0.2.1-main.3735548",
+    "on-error-resume-next": "^2.0.1",
     "p-retry": "^6.2.0",
     "powerva-turn-based-chat-adapter-framework": "^0.0.1-0",
     "uuid": "^9.0.1",
