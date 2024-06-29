@@ -79,7 +79,7 @@ export default memo(function CredentialForm({
       transport?: Transport;
       type?: BotType;
     }) => {
-      const transport: Transport = transportRef.current === 'server sent events' ? transportRef.current : 'rest';
+      const transport: Transport = transportRef.current === 'auto' ? transportRef.current : 'rest';
       const type: BotType =
         typeRef.current === 'published bot' || typeRef.current === 'test canvas bot' ? typeRef.current : 'prebuilt bot';
 
@@ -151,7 +151,7 @@ export default memo(function CredentialForm({
   );
 
   const handleTransportChange = useCallback<ChangeEventHandler<HTMLInputElement>>(
-    ({ currentTarget: { value } }) => dispatchChange({ transport: value === 'server sent events' ? value : 'rest' }),
+    ({ currentTarget: { value } }) => dispatchChange({ transport: value === 'auto' ? value : 'rest' }),
     [dispatchChange]
   );
 
@@ -226,25 +226,25 @@ export default memo(function CredentialForm({
         <dd>
           <label>
             <input
-              checked={transport !== 'server sent events'}
+              checked={transport === 'auto'}
+              name="transport"
+              onChange={handleTransportChange}
+              type="radio"
+              value="auto"
+            />
+            Auto (SSE over REST)
+          </label>
+        </dd>
+        <dd>
+          <label>
+            <input
+              checked={transport !== 'auto'}
               name="transport"
               onChange={handleTransportChange}
               type="radio"
               value="rest"
             />
             REST
-          </label>
-        </dd>
-        <dd>
-          <label>
-            <input
-              checked={transport === 'server sent events'}
-              name="transport"
-              onChange={handleTransportChange}
-              type="radio"
-              value="server sent events"
-            />
-            Server Sent Events
           </label>
         </dd>
         <dt>Emit start conversation event</dt>

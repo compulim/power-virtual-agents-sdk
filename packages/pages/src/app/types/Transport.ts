@@ -1,1 +1,1 @@
-export type Transport = 'rest' | 'server sent events';
+export type Transport = 'auto' | 'rest';

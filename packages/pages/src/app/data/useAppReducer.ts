@@ -69,7 +69,7 @@ const DEFAULT_STATE: State = {
   hostnameSuffix: 'api.powerplatform.com',
   islandURI: 'https://pvaruntime.us-il102.gateway.prod.island.powerapps.com',
   token: '',
-  transport: 'rest',
+  transport: 'auto',
   type: 'prebuilt bot'
 };
 
