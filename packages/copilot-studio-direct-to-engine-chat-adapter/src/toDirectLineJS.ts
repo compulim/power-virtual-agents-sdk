@@ -91,7 +91,9 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
                     // FileReader.readAsDataURL() is not available in Node.js.
                     return Object.freeze({
                       ...attachment,
-                      contentUrl: `data:;base64,${base64Encode(await res.arrayBuffer())}`
+                      contentUrl: `data:${res.headers.get('content-type') || ''};base64,${base64Encode(
+                        await res.arrayBuffer()
+                      )}`
                     });
                   }
                 }

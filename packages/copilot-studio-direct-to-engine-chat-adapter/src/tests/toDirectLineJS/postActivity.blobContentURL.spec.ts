@@ -70,7 +70,10 @@ describe('with a TurnGenerator', () => {
 
         postActivityObservable = directLineJS.postActivity({
           attachments: [
-            { contentType: 'application/octet-stream', contentUrl: URL.createObjectURL(new Blob([buffer])) }
+            {
+              contentType: 'application/octet-stream',
+              contentUrl: URL.createObjectURL(new Blob([buffer], { type: 'image/png' }))
+            }
           ],
           from: { id: 'u-00001' },
           text: 'Aloha!',
@@ -94,7 +97,10 @@ describe('with a TurnGenerator', () => {
           test('with the attachment of ArrayBuffer', () =>
             expect(nextTurn).toHaveBeenNthCalledWith(2, {
               attachments: [
-                expect.objectContaining({ contentType: 'application/octet-stream', contentUrl: 'data:;base64,AQID' })
+                expect.objectContaining({
+                  contentType: 'application/octet-stream',
+                  contentUrl: 'data:image/png;base64,AQID'
+                })
               ],
               from: { id: 'u-00001' },
               text: 'Aloha!',
