@@ -11,23 +11,33 @@
   "files": [
     "/dist/"
   ],
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/copilot-studio-direct-to-engine-chat-adapter.js",
+  "module": "./dist/copilot-studio-direct-to-engine-chat-adapter.mjs",
+  "types": "./dist/copilot-studio-direct-to-engine-chat-adapter.d.ts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
+        "types": "./dist/copilot-studio-direct-to-engine-chat-adapter.d.mts",
+        "default": "./dist/copilot-studio-direct-to-engine-chat-adapter.mjs"
       },
       "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+        "types": "./dist/copilot-studio-direct-to-engine-chat-adapter.d.ts",
+        "default": "./dist/copilot-studio-direct-to-engine-chat-adapter.js"
+      }
+    },
+    "./bundle": {
+      "import": {
+        "types": "./dist/copilot-studio-direct-to-engine-chat-adapter.bundle.d.mts",
+        "default": "./dist/copilot-studio-direct-to-engine-chat-adapter.bundle.mjs"
+      },
+      "require": {
+        "types": "./dist/copilot-studio-direct-to-engine-chat-adapter.bundle.d.ts",
+        "default": "./dist/copilot-studio-direct-to-engine-chat-adapter.bundle.js"
       }
     }
   },
   "scripts": {
-    "build": "tsup ./src/index.ts --dts --format cjs,esm --sourcemap --target chrome110,ios16,node18",
+    "build": "tsup",
     "bump": "npm run bump:prod && npm run bump:dev",
     "bump:dev": "if [ `cat package.json | jq -r '(.devDependencies // {}) | length'` -ne 0 ]; then npm install $(cat package.json | jq -r '(.pinDependencies // {}) as $p | ((.devDependencies // {}) | keys) | map(. + \"@\" + ($p[.] // [\"latest\"])[0]) | .[]'); fi",
     "bump:prod": "if [ `cat package.json | jq -r '(.dependencies // {}) | length'` -ne 0 ]; then npm install $(cat package.json | jq -r '(.pinDependencies // {}) as $p | ((.dependencies // {}) | keys) | map(. + \"@\" + ($p[.] // [\"latest\"])[0]) | .[]'); fi",

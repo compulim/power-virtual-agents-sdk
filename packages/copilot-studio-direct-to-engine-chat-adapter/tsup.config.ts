@@ -1,7 +1,22 @@
-import { defineConfig } from 'tsup';
+import { defineConfig, type Options } from 'tsup';
 
-export default defineConfig({
-  noExternal: ['eventsource-parser', 'p-retry', 'uuid'],
+const BASE_CONFIG: Options = {
+  dts: true,
+  format: ['cjs', 'esm'],
   platform: 'browser',
-  target: ['chrome100', 'edge100', 'firefox100', 'safari16']
-});
+  sourcemap: true,
+  target: ['chrome110', 'edge110', 'firefox110', 'ios16', 'node20']
+};
+
+export default defineConfig([
+  {
+    ...BASE_CONFIG,
+    entry: { 'copilot-studio-direct-to-engine-chat-adapter': './src/index.ts' }
+  },
+  {
+    ...BASE_CONFIG,
+    entry: { 'copilot-studio-direct-to-engine-chat-adapter.bundle': './src/index.ts' },
+    noExternal: [/./u],
+    minify: true
+  }
+]);
