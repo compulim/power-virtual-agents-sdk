@@ -3,6 +3,7 @@ env:
 extends:
   - eslint:recommended
 ignorePatterns:
+  - '**/dist/'
   - '**/lib/'
   - '**/node_modules/'
 overrides:
