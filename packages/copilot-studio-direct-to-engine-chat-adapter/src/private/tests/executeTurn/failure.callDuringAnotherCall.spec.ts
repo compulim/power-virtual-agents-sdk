@@ -4,7 +4,7 @@ import { setupServer } from 'msw/node';
 
 import type { Activity } from '../../../types/Activity';
 import type { Strategy } from '../../../types/Strategy';
-import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
+import DirectToEngineChatAdapterAPI from '../../DirectToEngineChatAdapterAPI';
 import type { BotResponse } from '../../types/BotResponse';
 import { parseConversationId } from '../../types/ConversationId';
 import type { DefaultHttpResponseResolver } from '../../types/DefaultHttpResponseResolver';
@@ -45,7 +45,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
   });
 
   describe.each([true, false])('With emitStartConversationEvent of %s', emitStartConversationEvent => {
-    let adapter: DirectToEngineServerSentEventsChatAdapterAPI;
+    let adapter: DirectToEngineChatAdapterAPI;
     let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
     let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
     let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
@@ -59,7 +59,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
       server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
       server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
 
-      adapter = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
+      adapter = new DirectToEngineChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
     });
 
     describe('When conversation started and first turn completed', () => {
@@ -99,7 +99,7 @@ data: end
         expect(activities).toEqual([{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }]));
 
       describe('when execute turn', () => {
-        let executeTurnResult: ReturnType<DirectToEngineServerSentEventsChatAdapterAPI['executeTurn']>;
+        let executeTurnResult: ReturnType<DirectToEngineChatAdapterAPI['executeTurn']>;
 
         beforeEach(() => {
           executeTurnResult = adapter.executeTurn({ from: { id: 'u-00001' }, text: 'Aloha!', type: 'message' });

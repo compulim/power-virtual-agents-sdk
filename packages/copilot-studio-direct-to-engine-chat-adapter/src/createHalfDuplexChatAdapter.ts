@@ -1,4 +1,4 @@
-import DirectToEngineServerSentEventsChatAdapterAPI from './private/DirectToEngineServerSentEventsChatAdapterAPI';
+import DirectToEngineChatAdapterAPI from './private/DirectToEngineChatAdapterAPI';
 import { type HalfDuplexChatAdapterAPI } from './private/types/HalfDuplexChatAdapterAPI';
 import { type Activity } from './types/Activity';
 import { type Strategy } from './types/Strategy';
@@ -45,7 +45,7 @@ export default function createHalfDuplexChatAdapter(
   init: CreateHalfDuplexChatAdapterInit = {}
 ): TurnGenerator {
   return (async function* (): TurnGenerator {
-    const api = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, {
+    const api = new DirectToEngineChatAdapterAPI(strategy, {
       retry: init.retry,
       telemetry: init.telemetry
     });

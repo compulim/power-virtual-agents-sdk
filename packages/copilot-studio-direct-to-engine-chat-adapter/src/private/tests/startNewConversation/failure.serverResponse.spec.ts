@@ -2,7 +2,7 @@ import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
 import type { Strategy } from '../../../types/Strategy';
-import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
+import DirectToEngineChatAdapterAPI from '../../DirectToEngineChatAdapterAPI';
 import type { DefaultHttpResponseResolver } from '../../types/DefaultHttpResponseResolver';
 import type { JestMockOf } from '../../types/JestMockOf';
 
@@ -46,16 +46,16 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
       ['server returned 400', new HttpResponse(undefined, { status: 400 }), { expectedNumCalled: 1 }],
       ['server returned 500', new HttpResponse(undefined, { status: 500 }), { expectedNumCalled: 5 }]
     ])('when conversation started and %s', (_, response, { expectedNumCalled }) => {
-      let adapter: DirectToEngineServerSentEventsChatAdapterAPI;
+      let adapter: DirectToEngineChatAdapterAPI;
       let httpPostConversations: JestMockOf<DefaultHttpResponseResolver>;
-      let startNewConversationResult: ReturnType<DirectToEngineServerSentEventsChatAdapterAPI['startNewConversation']>;
+      let startNewConversationResult: ReturnType<DirectToEngineChatAdapterAPI['startNewConversation']>;
 
       beforeEach(() => {
         httpPostConversations = jest.fn(NOT_MOCKED);
 
         server.use(http.post('http://test/conversations', httpPostConversations));
 
-        adapter = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
+        adapter = new DirectToEngineChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
         startNewConversationResult = adapter.startNewConversation({ emitStartConversationEvent });
       });
 

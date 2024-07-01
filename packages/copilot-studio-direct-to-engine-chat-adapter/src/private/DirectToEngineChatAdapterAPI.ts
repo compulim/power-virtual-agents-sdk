@@ -2,16 +2,16 @@ import { EventSourceParserStream, type ParsedEvent } from 'eventsource-parser/st
 import { asyncGeneratorWithLastValue } from 'iter-fest';
 import pRetry from 'p-retry';
 
+import { readableStreamValues } from 'iter-fest';
 import { type Activity } from '../types/Activity';
 import { type Strategy } from '../types/Strategy';
 import { type Transport } from '../types/Transport';
-import { readableStreamValues } from 'iter-fest';
 import { resolveURLWithQueryAndHash } from './resolveURLWithQueryAndHash';
 import { parseBotResponse } from './types/BotResponse';
 import { parseConversationId, type ConversationId } from './types/ConversationId';
 import { type HalfDuplexChatAdapterAPI, type StartNewConversationInit } from './types/HalfDuplexChatAdapterAPI';
 
-export type DirectToEngineServerSentEventsChatAdapterAPIInit = {
+export type DirectToEngineChatAdapterAPIInit = {
   retry?:
     | Readonly<{
         factor?: number | undefined;
@@ -27,13 +27,13 @@ export type DirectToEngineServerSentEventsChatAdapterAPIInit = {
 const DEFAULT_RETRY_COUNT = 4; // Will call 5 times.
 const MAX_CONTINUE_TURN = 999;
 
-export default class DirectToEngineServerSentEventsChatAdapterAPI implements HalfDuplexChatAdapterAPI {
+export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapterAPI {
   // NOTES: This class must work over RPC and cross-domain:
   //        - If need to extends this class, only add async methods (which return Promise)
   //        - Do not add any non-async methods or properties
   //        - Do not pass any arguments that is not able to be cloned by the Structured Clone Algorithm
   //        - After modifying this class, always test with a C1-hosted PVA Anywhere Bot
-  constructor(strategy: Strategy, init?: DirectToEngineServerSentEventsChatAdapterAPIInit) {
+  constructor(strategy: Strategy, init?: DirectToEngineChatAdapterAPIInit) {
     this.#retry = {
       factor: init?.retry?.factor,
       maxTimeout: init?.retry?.maxTimeout,
@@ -48,9 +48,9 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
 
   #busy: boolean = false;
   #conversationId: ConversationId | undefined = undefined;
-  #retry: DirectToEngineServerSentEventsChatAdapterAPIInit['retry'] & { retries: number };
+  #retry: DirectToEngineChatAdapterAPIInit['retry'] & { retries: number };
   #strategy: Strategy;
-  #telemetry: DirectToEngineServerSentEventsChatAdapterAPIInit['telemetry'];
+  #telemetry: DirectToEngineChatAdapterAPIInit['telemetry'];
 
   public startNewConversation({
     emitStartConversationEvent,
@@ -62,7 +62,7 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
 
     this.#busy = true;
 
-    return async function* (this: DirectToEngineServerSentEventsChatAdapterAPI) {
+    return async function* (this: DirectToEngineChatAdapterAPI) {
       try {
         if (this.#conversationId) {
           throw new Error('startNewConversation() cannot be called more than once.');
@@ -84,7 +84,7 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
 
     this.#busy = true;
 
-    return async function* (this: DirectToEngineServerSentEventsChatAdapterAPI) {
+    return async function* (this: DirectToEngineChatAdapterAPI) {
       try {
         if (!this.#conversationId) {
           throw new Error(`startNewConversation() must be called before executeTurn().`);
@@ -113,7 +113,7 @@ export default class DirectToEngineServerSentEventsChatAdapterAPI implements Hal
       transport?: Transport | undefined;
     }
   ): AsyncIterableIterator<Activity> {
-    return async function* (this: DirectToEngineServerSentEventsChatAdapterAPI) {
+    return async function* (this: DirectToEngineChatAdapterAPI) {
       const typingMap = new Map<string, string>();
 
       for (let numTurn = 0; numTurn < MAX_CONTINUE_TURN; numTurn++) {

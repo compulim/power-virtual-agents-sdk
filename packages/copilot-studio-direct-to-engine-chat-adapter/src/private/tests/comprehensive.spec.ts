@@ -3,7 +3,7 @@ import { setupServer } from 'msw/node';
 
 import type { Activity } from '../../types/Activity';
 import type { Strategy } from '../../types/Strategy';
-import DirectToEngineServerSentEventsChatAdapterAPI from '../DirectToEngineServerSentEventsChatAdapterAPI';
+import DirectToEngineChatAdapterAPI from '../DirectToEngineChatAdapterAPI';
 import type { BotResponse } from '../types/BotResponse';
 import { parseConversationId } from '../types/ConversationId';
 import type { DefaultHttpResponseResolver } from '../types/DefaultHttpResponseResolver';
@@ -44,7 +44,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
   });
 
   describe.each([true, false])('With emitStartConversationEvent of %s', emitStartConversationEvent => {
-    let adapter: DirectToEngineServerSentEventsChatAdapterAPI;
+    let adapter: DirectToEngineChatAdapterAPI;
     let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
     let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
     let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
@@ -58,11 +58,11 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
       server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
       server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
 
-      adapter = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
+      adapter = new DirectToEngineChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
     });
 
     describe('When conversation started and bot returned with 3 activities in 3 turns', () => {
-      let startNewConversationResult: ReturnType<DirectToEngineServerSentEventsChatAdapterAPI['startNewConversation']>;
+      let startNewConversationResult: ReturnType<DirectToEngineChatAdapterAPI['startNewConversation']>;
 
       beforeEach(() => {
         startNewConversationResult = adapter.startNewConversation({ emitStartConversationEvent, locale: 'ja-JP' });
@@ -260,7 +260,7 @@ data: end
               test('should complete', () => expect(iteratorResult).toEqual({ done: true, value: undefined }));
 
               describe('when execute turn and bot returned 3 activities in 3 turns', () => {
-                let executeTurnResult: ReturnType<DirectToEngineServerSentEventsChatAdapterAPI['executeTurn']>;
+                let executeTurnResult: ReturnType<DirectToEngineChatAdapterAPI['executeTurn']>;
 
                 beforeEach(() => {
                   executeTurnResult = adapter.executeTurn({

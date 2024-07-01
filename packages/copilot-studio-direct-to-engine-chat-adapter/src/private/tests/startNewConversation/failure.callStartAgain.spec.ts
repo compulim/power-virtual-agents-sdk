@@ -4,7 +4,7 @@ import { setupServer } from 'msw/node';
 
 import type { Activity } from '../../../types/Activity';
 import type { Strategy } from '../../../types/Strategy';
-import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
+import DirectToEngineChatAdapterAPI from '../../DirectToEngineChatAdapterAPI';
 import type { BotResponse } from '../../types/BotResponse';
 import { parseConversationId } from '../../types/ConversationId';
 import type { DefaultHttpResponseResolver } from '../../types/DefaultHttpResponseResolver';
@@ -45,7 +45,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
   });
 
   describe.each([true, false])('With emitStartConversationEvent of %s', emitStartConversationEvent => {
-    let adapter: DirectToEngineServerSentEventsChatAdapterAPI;
+    let adapter: DirectToEngineChatAdapterAPI;
     let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
     let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
 
@@ -56,7 +56,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
       server.use(http.post('http://test/conversations', httpPostConversation));
       server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
 
-      adapter = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
+      adapter = new DirectToEngineChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
     });
 
     describe('When conversation started and first turn completed', () => {
@@ -97,7 +97,7 @@ data: end
 
       describe('when call startNewConversation again', () => {
         let startNewConversationResult: ReturnType<
-          DirectToEngineServerSentEventsChatAdapterAPI['startNewConversation']
+          DirectToEngineChatAdapterAPI['startNewConversation']
         >;
 
         beforeEach(() => {

@@ -1,7 +1,7 @@
 import { setupServer } from 'msw/node';
 
 import type { Strategy } from '../../../types/Strategy';
-import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
+import DirectToEngineChatAdapterAPI from '../../DirectToEngineChatAdapterAPI';
 
 const server = setupServer();
 
@@ -10,8 +10,8 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe('When call executeTurn before start new conversation', () => {
-  let adapter: DirectToEngineServerSentEventsChatAdapterAPI;
-  let executeTurnResult: ReturnType<DirectToEngineServerSentEventsChatAdapterAPI['executeTurn']>;
+  let adapter: DirectToEngineChatAdapterAPI;
+  let executeTurnResult: ReturnType<DirectToEngineChatAdapterAPI['executeTurn']>;
 
   beforeEach(() => {
     const strategy: Strategy = {
@@ -23,7 +23,7 @@ describe('When call executeTurn before start new conversation', () => {
       }
     };
 
-    adapter = new DirectToEngineServerSentEventsChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
+    adapter = new DirectToEngineChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
     executeTurnResult = adapter.executeTurn({
       from: { id: 'u-00001', role: 'user' },
       text: 'Hello, World!',
