@@ -1,8 +1,8 @@
 import type { ConnectionStatus } from 'botframework-directlinejs';
-import { DeferredPromise } from 'powerva-turn-based-chat-adapter-framework';
 
 import type { TurnGenerator } from '../../createHalfDuplexChatAdapter';
 import type { JestMockOf } from '../../private/types/JestMockOf';
+import promiseWithResolvers, { type PromiseWithResolvers } from '../../private/promiseWithResolvers';
 import toDirectLineJS from '../../toDirectLineJS';
 import type { Activity } from '../../types/Activity';
 import type { DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
@@ -13,7 +13,7 @@ describe('with a TurnGenerator', () => {
   let activityObserver: JestMockOf<(activity: Activity) => void>;
   let connectionStatusObserver: JestMockOf<(connectionStatus: ConnectionStatus) => void>;
   let directLineJS: DirectLineJSBotConnection;
-  let incomingActivityDeferred: DeferredPromise<Activity | typeof END_TURN>;
+  let incomingActivityDeferred: PromiseWithResolvers<Activity | typeof END_TURN>;
   let turnGenerator: TurnGenerator;
   let nextTurn: JestMockOf<(activity?: Activity | undefined) => TurnGenerator>;
 
@@ -21,7 +21,7 @@ describe('with a TurnGenerator', () => {
     nextTurn = jest.fn<TurnGenerator, [Activity | undefined]>(() => {
       return (async function* () {
         for (;;) {
-          incomingActivityDeferred = new DeferredPromise();
+          incomingActivityDeferred = promiseWithResolvers();
 
           const activity = await incomingActivityDeferred.promise;
 

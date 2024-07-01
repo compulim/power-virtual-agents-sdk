@@ -1,5 +1,5 @@
 import type { ConnectionStatus } from 'botframework-directlinejs';
-import { type Observable } from 'powerva-turn-based-chat-adapter-framework';
+import { type Observable } from 'iter-fest';
 
 import type { TurnGenerator } from '../../createHalfDuplexChatAdapter';
 import DeferredQueue from '../../private/DeferredQueue';

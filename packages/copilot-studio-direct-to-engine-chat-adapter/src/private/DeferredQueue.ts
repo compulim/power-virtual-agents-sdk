@@ -1,11 +1,11 @@
-import { DeferredPromise } from 'powerva-turn-based-chat-adapter-framework';
+import promiseWithResolvers from '../private/promiseWithResolvers';
 
 export default class DeferredQueue<T> {
   constructor() {
-    this.#deferred = new DeferredPromise();
+    this.#deferred = promiseWithResolvers();
   }
 
-  #deferred: DeferredPromise<T>;
+  #deferred: PromiseWithResolvers<T>;
   #queue: T[] = [];
 
   public get promise(): Promise<T> {
@@ -21,7 +21,7 @@ export default class DeferredQueue<T> {
   public push(value: T) {
     this.#queue.push(value);
     this.#deferred.resolve(value);
-    this.#deferred = new DeferredPromise();
+    this.#deferred = promiseWithResolvers();
   }
 
   public reject(error: unknown) {

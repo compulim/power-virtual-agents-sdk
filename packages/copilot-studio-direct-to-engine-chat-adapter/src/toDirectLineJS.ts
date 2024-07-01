@@ -1,15 +1,12 @@
 import { encode as base64Encode } from 'base64-arraybuffer';
-import { asyncGeneratorWithLastValue } from 'iter-fest';
+import { Observable, asyncGeneratorWithLastValue } from 'iter-fest';
 import { onErrorResumeNext } from 'on-error-resume-next';
-import {
-  DeferredObservable,
-  DeferredPromise,
-  Observable,
-  shareObservable
-} from 'powerva-turn-based-chat-adapter-framework';
 import { v4 } from 'uuid';
 
 import type { TurnGenerator } from './createHalfDuplexChatAdapter';
+import DeferredObservable from './private/DeferredObservable';
+import promiseWithResolvers from './private/promiseWithResolvers';
+import shareObservable from './private/shareObservable';
 import { type Activity } from './types/Activity';
 import { type Attachment } from './types/Attachment';
 import { type ActivityId, type DirectLineJSBotConnection } from './types/DirectLineJSBotConnection';
@@ -31,9 +28,8 @@ function once(fn: () => Promise<void> | void): () => Promise<void> | void {
 
 export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): DirectLineJSBotConnection {
   let nextSequenceId = 0;
-  let postActivityDeferred = new DeferredPromise<
-    readonly [Activity, (id: ActivityId) => void, (error: unknown) => void]
-  >();
+  let postActivityDeferred =
+    promiseWithResolvers<readonly [Activity, (id: ActivityId) => void, (error: unknown) => void]>();
 
   // TODO: Find out why replyToId is pointing to nowhere.
   // TODO: Can the service add "timestamp" field?
@@ -73,7 +69,7 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
           const [activity, resolvePostActivity, rejectPostActivity] = await postActivityDeferred.promise;
 
           try {
-            postActivityDeferred = new DeferredPromise();
+            postActivityDeferred = promiseWithResolvers();
 
             // Patch `activity.attachments[].contentUrl` into Data URI if it was Blob URL.
             if (activity.type === 'message' && activity.attachments) {

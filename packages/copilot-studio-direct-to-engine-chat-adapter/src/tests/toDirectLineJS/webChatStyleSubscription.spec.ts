@@ -1,8 +1,8 @@
 import type { ConnectionStatus } from 'botframework-directlinejs';
-import { DeferredPromise } from 'powerva-turn-based-chat-adapter-framework';
 
 import type { TurnGenerator } from '../../createHalfDuplexChatAdapter';
 import DeferredQueue from '../../private/DeferredQueue';
+import promiseWithResolvers, { PromiseWithResolvers } from '../../private/promiseWithResolvers';
 import type { JestMockOf } from '../../private/types/JestMockOf';
 import toDirectLineJS from '../../toDirectLineJS';
 import type { Activity } from '../../types/Activity';
@@ -44,10 +44,10 @@ describe('with a TurnGenerator', () => {
 
   describe('when kick off connection by subscribing to activity observable', () => {
     let directLineJS: DirectLineJSBotConnection;
-    let waitUntilGreetingReceived: DeferredPromise<void>;
+    let waitUntilGreetingReceived: PromiseWithResolvers<void>;
 
     beforeEach(() => {
-      waitUntilGreetingReceived = new DeferredPromise<void>();
+      waitUntilGreetingReceived = promiseWithResolvers();
 
       directLineJS = toDirectLineJS(turnGenerator);
 
