@@ -109,5 +109,46 @@ describe('with a TurnGenerator', () => {
         });
       });
     });
+
+    describe('when post activity with an invalid blob URL', () => {
+      let postActivityObservable: Observable<string>;
+
+      beforeEach(() => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        const buffer = new ArrayBuffer(3);
+        const view = new Uint8Array(buffer);
+
+        view.set([1, 2, 3]);
+
+        postActivityObservable = directLineJS.postActivity({
+          attachments: [{ contentType: 'application/octet-stream', contentUrl: 'blob:invalid' }],
+          from: { id: 'u-00001' },
+          text: 'Aloha!',
+          type: 'message'
+        });
+      });
+
+      afterEach(() => jest.spyOn(console, 'error').mockRestore());
+
+      test('should not call next turn', () => expect(nextTurn).toHaveBeenCalledTimes(1));
+
+      describe('when subscribe the post activity', () => {
+        let next: JestMockOf<(id: string) => void>;
+        let error: JestMockOf<(error: unknown) => void>;
+
+        beforeEach(() => {
+          error = jest.fn();
+          next = jest.fn();
+
+          postActivityObservable.subscribe({ error, next });
+        });
+
+        test('should not receive next activity ID', () => expect(next).not.toHaveBeenCalled());
+        test('should reject the observable', () => expect(error).toHaveBeenCalledTimes(1));
+        test('should not call executeTurn', () => expect(nextTurn).toHaveBeenCalledTimes(1));
+        test('should close the connection', () => expect(connectionStatusObserver).toHaveBeenNthCalledWith(4, 4));
+      });
+    });
   });
 });

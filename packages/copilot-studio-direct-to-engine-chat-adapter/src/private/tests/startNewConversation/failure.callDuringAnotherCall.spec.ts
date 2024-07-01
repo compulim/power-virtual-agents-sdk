@@ -1,10 +1,10 @@
+import { asyncIteratorToArray } from 'iter-fest';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
 import type { Activity } from '../../../types/Activity';
 import type { Strategy } from '../../../types/Strategy';
 import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
-import asyncIterableToArray from '../../asyncIterableToArray';
 import type { BotResponse } from '../../types/BotResponse';
 import { parseConversationId } from '../../types/ConversationId';
 import type { DefaultHttpResponseResolver } from '../../types/DefaultHttpResponseResolver';
@@ -128,7 +128,7 @@ data: end
           let activities: Activity[];
 
           beforeEach(async () => {
-            activities = await asyncIterableToArray(firstStartNewConversationResult);
+            activities = await asyncIteratorToArray(firstStartNewConversationResult);
           });
 
           test('should return all activities', () =>

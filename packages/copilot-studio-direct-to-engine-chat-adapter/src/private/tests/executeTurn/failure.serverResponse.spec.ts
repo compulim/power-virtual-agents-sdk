@@ -1,10 +1,10 @@
+import { asyncIteratorToArray } from 'iter-fest';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
 import type { Activity } from '../../../types/Activity';
 import type { Strategy } from '../../../types/Strategy';
 import DirectToEngineServerSentEventsChatAdapterAPI from '../../DirectToEngineServerSentEventsChatAdapterAPI';
-import asyncIterableToArray from '../../asyncIterableToArray';
 import type { BotResponse } from '../../types/BotResponse';
 import { parseConversationId } from '../../types/ConversationId';
 import type { DefaultHttpResponseResolver } from '../../types/DefaultHttpResponseResolver';
@@ -89,7 +89,7 @@ data: end
 
         const startNewConversationResult = adapter.startNewConversation({ emitStartConversationEvent });
 
-        activities = await asyncIterableToArray(startNewConversationResult);
+        activities = await asyncIteratorToArray(startNewConversationResult);
       });
 
       test('should receive greeting activities', () =>

@@ -1,4 +1,5 @@
 import { encode as base64Encode } from 'base64-arraybuffer';
+import { asyncGeneratorWithLastValue } from 'iter-fest';
 import { onErrorResumeNext } from 'on-error-resume-next';
 import {
   DeferredObservable,
@@ -8,7 +9,6 @@ import {
 } from 'powerva-turn-based-chat-adapter-framework';
 import { v4 } from 'uuid';
 
-import { asyncGeneratorWithLastValue } from 'iter-fest';
 import type { TurnGenerator } from './createHalfDuplexChatAdapter';
 import { type Activity } from './types/Activity';
 import { type Attachment } from './types/Attachment';
@@ -31,7 +31,9 @@ function once(fn: () => Promise<void> | void): () => Promise<void> | void {
 
 export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): DirectLineJSBotConnection {
   let nextSequenceId = 0;
-  let postActivityDeferred = new DeferredPromise<readonly [Activity, (id: ActivityId) => void]>();
+  let postActivityDeferred = new DeferredPromise<
+    readonly [Activity, (id: ActivityId) => void, (error: unknown) => void]
+  >();
 
   // TODO: Find out why replyToId is pointing to nowhere.
   // TODO: Can the service add "timestamp" field?
@@ -68,42 +70,48 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
           await handleAcknowledgementOnce();
 
           const executeTurn = iterator.lastValue();
-          const [activity, callback] = await postActivityDeferred.promise;
+          const [activity, resolvePostActivity, rejectPostActivity] = await postActivityDeferred.promise;
 
-          postActivityDeferred = new DeferredPromise();
+          try {
+            postActivityDeferred = new DeferredPromise();
 
-          // Patch `activity.attachments[].contentUrl` into Data URI if it was Blob URL.
-          if (activity.type === 'message' && activity.attachments) {
-            activity.attachments = await Promise.all(
-              activity.attachments.map(async (attachment: Attachment) => {
-                if ('contentUrl' in attachment) {
-                  const { contentUrl } = attachment;
+            // Patch `activity.attachments[].contentUrl` into Data URI if it was Blob URL.
+            if (activity.type === 'message' && activity.attachments) {
+              activity.attachments = await Promise.all(
+                activity.attachments.map(async (attachment: Attachment) => {
+                  if ('contentUrl' in attachment) {
+                    const { contentUrl } = attachment;
 
-                  // Ignore malformed URL.
-                  if (onErrorResumeNext(() => new URL(contentUrl).protocol) === 'blob:') {
-                    // Only allow fetching blob URLs.
-                    const res = await fetch(contentUrl);
+                    // Ignore malformed URL.
+                    if (onErrorResumeNext(() => new URL(contentUrl).protocol) === 'blob:') {
+                      // Only allow fetching blob URLs.
+                      const res = await fetch(contentUrl);
 
-                    if (!res.ok) {
-                      throw new Error('Failed to fetch attachment of blob URL.');
+                      if (!res.ok) {
+                        throw new Error('Failed to fetch attachment of blob URL.');
+                      }
+
+                      // FileReader.readAsDataURL() is not available in Node.js.
+                      return Object.freeze({
+                        ...attachment,
+                        contentUrl: `data:${res.headers.get('content-type') || ''};base64,${base64Encode(
+                          await res.arrayBuffer()
+                        )}`
+                      });
                     }
-
-                    // FileReader.readAsDataURL() is not available in Node.js.
-                    return Object.freeze({
-                      ...attachment,
-                      contentUrl: `data:${res.headers.get('content-type') || ''};base64,${base64Encode(
-                        await res.arrayBuffer()
-                      )}`
-                    });
                   }
-                }
 
-                return attachment;
-              })
-            );
+                  return attachment;
+                })
+              );
+            }
+
+            turnGenerator = executeTurn(activity);
+          } catch (error) {
+            rejectPostActivity(error);
+
+            throw error;
           }
-
-          turnGenerator = executeTurn(activity);
 
           // We will generate the activity ID and echoback the activity only when the first incoming activity arrived.
           // This make sure the bot acknowledged the outgoing activity before we echoback the activity.
@@ -111,7 +119,7 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
             const activityId = v4() as ActivityId;
 
             observer.next(patchActivity({ ...activity, id: activityId }));
-            callback(activityId);
+            resolvePostActivity(activityId);
           });
         }
       } catch (error) {
@@ -133,7 +141,9 @@ export default function toDirectLineJS(halfDuplexChatAdapter: TurnGenerator): Di
     postActivity: (activity: Activity) =>
       shareObservable(
         new Observable<ActivityId>(observer =>
-          postActivityDeferred.resolve(Object.freeze([activity, id => observer.next(id)]))
+          postActivityDeferred.resolve(
+            Object.freeze([activity, id => observer.next(id), error => observer.error(error)])
+          )
         )
       )
   };
