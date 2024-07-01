@@ -1,4 +1,7 @@
 {
+  "setupFilesAfterEnv": [
+    "../../configs/jest/processEnvNpmPackageVersion.js"
+  ],
   "transform": {
     "\\.[jt]sx?$": [
       "babel-jest",

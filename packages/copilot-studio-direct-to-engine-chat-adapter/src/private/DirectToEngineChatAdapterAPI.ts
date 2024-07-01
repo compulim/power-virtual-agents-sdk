@@ -129,6 +129,12 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
               transport === 'rest' ? 'application/json' : 'text/event-stream,application/json;q=0.9'
             );
             requestHeaders.set('content-type', 'application/json');
+            requestHeaders.set(
+              'x-ms-chat-adapter',
+              new URLSearchParams([
+                ['version', process.env.npm_package_version || '0.0.0-0']
+              ] satisfies string[][]).toString()
+            );
 
             currentResponse = await fetch(
               resolveURLWithQueryAndHash(baseURL, 'conversations', this.#conversationId, isContinueTurn && 'continue'),

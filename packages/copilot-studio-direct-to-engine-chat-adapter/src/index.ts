@@ -13,6 +13,10 @@ import { type DirectLineJSBotConnection } from './types/DirectLineJSBotConnectio
 import { type Strategy, type StrategyRequestInit } from './types/Strategy';
 import { type Transport } from './types/Transport';
 
+declare global {
+  const env: { npm_package_version: string | undefined };
+}
+
 export {
   PrebuiltBotStrategy,
   PublishedBotStrategy,

@@ -132,6 +132,11 @@ data: end
           test('with header "x-dummy" of "dummy"', () =>
             expect(httpPostConversation.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
 
+          test('with header "x-ms-chat-adapter"', () =>
+            expect(httpPostConversation.mock.calls[0][0].request.headers.get('x-ms-chat-adapter')).toBe(
+              'version=0.0.0-test'
+            ));
+
           test('without header "x-ms-conversationid"', () =>
             expect(httpPostConversation.mock.calls[0][0].request.headers.has('x-ms-conversationid')).toBe(false));
 
@@ -180,6 +185,11 @@ data: end
 
               test('with header "x-dummy" of "dummy"', () =>
                 expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
+
+              test('with header "x-ms-chat-adapter"', () =>
+                expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-chat-adapter')).toBe(
+                  'version=0.0.0-test'
+                ));
 
               test('with header "x-ms-conversationid" of "c-00001"', () =>
                 expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe('c-00001'));
@@ -233,6 +243,11 @@ data: end
 
                 test('with header "x-dummy" of "dummy"', () =>
                   expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-dummy')).toBe('dummy'));
+
+                test('with header "x-ms-chat-adapter"', () =>
+                  expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-ms-chat-adapter')).toBe(
+                    'version=0.0.0-test'
+                  ));
 
                 test('with header "x-ms-conversationid" of "c-00001"', () =>
                   expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-ms-conversationid')).toBe('c-00001'));
@@ -341,6 +356,11 @@ data: end
                     test('with header "x-dummy" of "dummy"', () =>
                       expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
 
+                    test('with header "x-ms-chat-adapter"', () =>
+                      expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-chat-adapter')).toBe(
+                        'version=0.0.0-test'
+                      ));
+
                     test('with header "x-ms-conversationid" of "c-00001"', () =>
                       expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe(
                         'c-00001'
@@ -395,6 +415,11 @@ data: end
 
                         test('with header "x-dummy" of "dummy"', () =>
                           expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-dummy')).toBe('dummy'));
+
+                        test('with header "x-ms-chat-adapter"', () =>
+                          expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-ms-chat-adapter')).toBe(
+                            'version=0.0.0-test'
+                          ));
 
                         test('with header "x-ms-conversationid" of "c-00001"', () =>
                           expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-ms-conversationid')).toBe(
@@ -453,6 +478,11 @@ data: end
 
                           test('with header "x-dummy" of "dummy"', () =>
                             expect(httpPostContinue.mock.calls[3][0].request.headers.get('x-dummy')).toBe('dummy'));
+
+                          test('with header "x-ms-chat-adapter"', () =>
+                            expect(httpPostContinue.mock.calls[3][0].request.headers.get('x-ms-chat-adapter')).toBe(
+                              'version=0.0.0-test'
+                            ));
 
                           test('with header "x-ms-conversationid" of "c-00001"', () =>
                             expect(httpPostContinue.mock.calls[3][0].request.headers.get('x-ms-conversationid')).toBe(
