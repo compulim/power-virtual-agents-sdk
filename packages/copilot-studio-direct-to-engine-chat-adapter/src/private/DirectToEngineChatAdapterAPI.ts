@@ -1,8 +1,7 @@
 import { EventSourceParserStream, type ParsedEvent } from 'eventsource-parser/stream';
-import { asyncGeneratorWithLastValue } from 'iter-fest';
+import { asyncGeneratorWithLastValue, readableStreamValues } from 'iter-fest';
 import pRetry from 'p-retry';
 
-import { readableStreamValues } from 'iter-fest';
 import { type Activity } from '../types/Activity';
 import { type Strategy } from '../types/Strategy';
 import { type Transport } from '../types/Transport';

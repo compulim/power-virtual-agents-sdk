@@ -63,9 +63,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
     });
 
     describe('When conversation started', () => {
-      let firstStartNewConversationResult: ReturnType<
-        DirectToEngineChatAdapterAPI['startNewConversation']
-      >;
+      let firstStartNewConversationResult: ReturnType<DirectToEngineChatAdapterAPI['startNewConversation']>;
 
       beforeEach(async () => {
         if (transport === 'rest') {

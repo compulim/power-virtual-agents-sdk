@@ -96,9 +96,7 @@ data: end
         expect(activities).toEqual([{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }]));
 
       describe('when call startNewConversation again', () => {
-        let startNewConversationResult: ReturnType<
-          DirectToEngineChatAdapterAPI['startNewConversation']
-        >;
+        let startNewConversationResult: ReturnType<DirectToEngineChatAdapterAPI['startNewConversation']>;
 
         beforeEach(() => {
           if (transport === 'auto') {

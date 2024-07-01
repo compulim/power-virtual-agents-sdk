@@ -1,6 +1,6 @@
-import MockObserver from './MockObserver';
-
 import { Observable, type SubscriptionObserver } from 'iter-fest';
+
+import MockObserver from './MockObserver';
 
 describe('a subscribed observer on a completed sequence', () => {
   let observable: Observable<number>;
