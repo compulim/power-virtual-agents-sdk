@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "files": [
+    "/bundle.d.ts",
     "/bundle.js",
     "/dist/"
   ],
