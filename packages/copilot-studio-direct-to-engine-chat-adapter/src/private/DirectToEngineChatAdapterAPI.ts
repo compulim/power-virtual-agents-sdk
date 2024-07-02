@@ -131,9 +131,7 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
             requestHeaders.set('content-type', 'application/json');
             requestHeaders.set(
               'x-ms-chat-adapter',
-              new URLSearchParams([
-                ['version', process.env.npm_package_version || '0.0.0-0']
-              ] satisfies string[][]).toString()
+              new URLSearchParams([['version', process.env.npm_package_version]] satisfies string[][]).toString()
             );
 
             currentResponse = await fetch(

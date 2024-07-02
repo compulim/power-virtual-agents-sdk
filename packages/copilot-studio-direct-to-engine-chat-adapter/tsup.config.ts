@@ -2,6 +2,9 @@ import { defineConfig, type Options } from 'tsup';
 
 const BASE_CONFIG: Options = {
   dts: true,
+  env: {
+    npm_package_version: process.env.npm_package_version || '0.0.0-0'
+  },
   format: ['cjs', 'esm'],
   platform: 'browser',
   sourcemap: true,

@@ -14,7 +14,7 @@ import { type Strategy, type StrategyRequestInit } from './types/Strategy';
 import { type Transport } from './types/Transport';
 
 declare global {
-  const env: { npm_package_version: string | undefined };
+  const env: { npm_package_version: string };
 }
 
 export {
