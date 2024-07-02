@@ -9,7 +9,7 @@
   },
   "license": "MIT",
   "files": [
-    "/browser.js",
+    "/bundle.js",
     "/dist/"
   ],
   "main": "./dist/copilot-studio-direct-to-engine-chat-adapter.js",
