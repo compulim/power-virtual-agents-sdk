@@ -10,6 +10,7 @@ import type { Activity } from 'botframework-directlinejs';
 
 type Options = {
   signal?: AbortSignal;
+  correlationId?: string;
 };
 
 export interface TurnBasedChatAdapterAPI {
