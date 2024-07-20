@@ -66,7 +66,7 @@ describe('client with telemetry', () => {
       // TODO: [P0] This won't work on Node.js 20 because "fetch" is read only property.
       (globalThis.fetch as MockedFetch).mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })));
 
-      client.startNewConversation(true, { locale: 'zh-HAnt-HK', signal: abortController.signal });
+      client.startNewConversation(true, { locale: 'zh-HAnt-HK', signal: abortController.signal, correlationId: '1234' });
     });
 
     test('fetch should be called once', () => expect(globalThis.fetch).toBeCalledTimes(1));
@@ -78,7 +78,8 @@ describe('client with telemetry', () => {
       expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(
         'headers',
         expect.objectContaining({
-          'x-test': 'dummy'
+          'x-test': 'dummy',
+          'x-ms-correlationid': '1234'
         })
       ));
     test('fetch should be called with body', () =>
@@ -164,7 +165,7 @@ describe('client with telemetry', () => {
       client.executeTurn(
         'c-00001',
         { from: { id: 'u-00001' }, text: 'Hello, World!', type: 'message' },
-        { signal: abortController.signal }
+        { signal: abortController.signal, correlationId: '1234' }
       );
     });
 
@@ -180,7 +181,8 @@ describe('client with telemetry', () => {
         'headers',
         expect.objectContaining({
           'Content-Type': 'application/json',
-          'x-test': 'dummy'
+          'x-test': 'dummy',
+          'x-ms-correlationid': '1234'
         })
       ));
     test('fetch should be called with body', () => {
@@ -199,7 +201,7 @@ describe('client with telemetry', () => {
     beforeEach(() => {
       (globalThis.fetch as MockedFetch).mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })));
 
-      client.continueTurn('c-00001', { signal: abortController.signal });
+      client.continueTurn('c-00001', { signal: abortController.signal, correlationId: "1234" });
     });
 
     test('fetch should be called once', () => expect(globalThis.fetch).toBeCalledTimes(1));
@@ -213,7 +215,8 @@ describe('client with telemetry', () => {
       expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(
         'headers',
         expect.objectContaining({
-          'x-test': 'dummy'
+          'x-test': 'dummy',
+          'x-ms-correlationid': '1234'
         })
       ));
     test('fetch should be called with body', () =>
