@@ -227,4 +227,56 @@ describe('client with telemetry', () => {
         })
       ));
   });
+
+  describe('when startNewConversation() is called without correlationId', () => {    
+    beforeEach(() => {    
+      (globalThis.fetch as MockedFetch).mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })));    
+      
+      client.startNewConversation(true, {});    
+    });    
+      
+    test('fetch should be called without correlationId header', () =>  
+      expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(  
+        'headers',  
+        expect.not.objectContaining({  
+          'x-ms-correlationid': expect.any(String)  
+        })  
+      ));
+  });    
+      
+  describe('when executeTurn() is called without correlationId', () => {    
+    beforeEach(() => {    
+      (globalThis.fetch as MockedFetch).mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })));    
+      
+      client.executeTurn(    
+        'c-00001',    
+        { from: { id: 'u-00001' }, text: 'Hello, World!', type: 'message' }, 
+        {}
+      );    
+    });    
+      
+    test('fetch should be called without correlationId header', () =>  
+      expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(  
+        'headers',  
+        expect.not.objectContaining({  
+          'x-ms-correlationid': expect.any(String)  
+        })  
+      ));  
+  });    
+      
+  describe('when continueTurn() is called without correlationId', () => {    
+    beforeEach(() => {    
+      (globalThis.fetch as MockedFetch).mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })));    
+      
+      client.continueTurn('c-00001', {});    
+    });    
+      
+    test('fetch should be called without correlationId header', () =>  
+      expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(  
+        'headers',  
+        expect.not.objectContaining({  
+          'x-ms-correlationid': expect.any(String)  
+        })  
+      )); 
+    });
 });
