@@ -1,5 +1,5 @@
 // @ts-expect-error No typing is available for core-js-pure
-import coreJSPromiseWithResolvers from 'core-js-pure/features/promise/with-resolvers';
+import coreJSPromiseWithResolvers from 'core-js-pure/features/promise/with-resolvers.js';
 
 type PromiseWithResolvers<T> = ReturnType<typeof Promise.withResolvers<T>>;
 
