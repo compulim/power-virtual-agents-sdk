@@ -151,7 +151,7 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
               new URLSearchParams([['version', process.env.npm_package_version]] satisfies string[][]).toString()
             );
             const correlationId = this.#telemetry?.correlationId;
-            correlationId && requestHeaders.set('x-ms-correlationid', correlationId);
+            correlationId && requestHeaders.set('x-ms-correlation-id', correlationId);
 
             currentResponse = await fetch(
               resolveURLWithQueryAndHash(baseURL, 'conversations', this.#conversationId, isContinueTurn && 'continue'),

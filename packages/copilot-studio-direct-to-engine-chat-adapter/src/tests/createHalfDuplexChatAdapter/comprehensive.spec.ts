@@ -159,13 +159,13 @@ data: end
               expect(httpPostConversation.mock.calls[0][0].request.headers.has('x-ms-conversationid')).toBe(false));
 
             if (shouldSetCorrelationId) {
-              test('with header "x-ms-correlationid" of "t-00001"', () =>
-                expect(httpPostConversation.mock.calls[0][0].request.headers.get('x-ms-correlationId')).toBe(
+              test('with header "x-ms-correlation-id" of "t-00001"', () =>
+                expect(httpPostConversation.mock.calls[0][0].request.headers.get('x-ms-correlation-id')).toBe(
                   't-00001'
                 ));
             } else {
-              test('without header "x-ms-correlationid"', () =>
-                expect(httpPostConversation.mock.calls[0][0].request.headers.has('x-ms-correlationId')).toBe(false));
+              test('without header "x-ms-correlation-id"', () =>
+                expect(httpPostConversation.mock.calls[0][0].request.headers.has('x-ms-correlation-id')).toBe(false));
             }
 
             test(`with JSON body of { dummy: "dummy", emitStartConversationEvent: ${emitStartConversationEvent}, locale: 'ja-JP' }`, () =>
@@ -223,13 +223,13 @@ data: end
                   expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe('c-00001'));
 
                 if (shouldSetCorrelationId) {
-                  test('with header "x-ms-correlationid" of "t-00001"', () =>
-                    expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-correlationId')).toBe(
+                  test('with header "x-ms-correlation-id" of "t-00001"', () =>
+                    expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-correlation-id')).toBe(
                       't-00001'
                     ));
                 } else {
-                  test('without header "x-ms-correlationid"', () =>
-                    expect(httpPostContinue.mock.calls[0][0].request.headers.has('x-ms-correlationId')).toBe(false));
+                  test('without header "x-ms-correlation-id"', () =>
+                    expect(httpPostContinue.mock.calls[0][0].request.headers.has('x-ms-correlation-id')).toBe(false));
                 }
 
                 test('with JSON body of { dummy: "dummy" }', () =>
@@ -288,13 +288,13 @@ data: end
                     ));
 
                   if (shouldSetCorrelationId) {
-                    test('with header "x-ms-correlationid" of "t-00001"', () =>
-                      expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-ms-correlationId')).toBe(
+                    test('with header "x-ms-correlation-id" of "t-00001"', () =>
+                      expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-ms-correlation-id')).toBe(
                         't-00001'
                       ));
                   } else {
-                    test('without header "x-ms-correlationid"', () =>
-                      expect(httpPostContinue.mock.calls[1][0].request.headers.has('x-ms-correlationId')).toBe(false));
+                    test('without header "x-ms-correlation-id"', () =>
+                      expect(httpPostContinue.mock.calls[1][0].request.headers.has('x-ms-correlation-id')).toBe(false));
                   }
 
                   test('with JSON body of { dummy: "dummy" }', () =>
@@ -409,13 +409,13 @@ data: end
                         ));
 
                       if (shouldSetCorrelationId) {
-                        test('with header "x-ms-correlationid" of "t-00002"', () =>
-                          expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-correlationId')).toBe(
+                        test('with header "x-ms-correlation-id" of "t-00002"', () =>
+                          expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-correlation-id')).toBe(
                             't-00002'
                           ));
                       } else {
-                        test('without header "x-ms-correlationid"', () =>
-                          expect(httpPostExecute.mock.calls[0][0].request.headers.has('x-ms-correlationId')).toBe(
+                        test('without header "x-ms-correlation-id"', () =>
+                          expect(httpPostExecute.mock.calls[0][0].request.headers.has('x-ms-correlation-id')).toBe(
                             false
                           ));
                       }
@@ -479,13 +479,13 @@ data: end
                             ));
 
                           if (shouldSetCorrelationId) {
-                            test('with header "x-ms-correlationid" of "t-00002"', () =>
-                              expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-ms-correlationId')).toBe(
+                            test('with header "x-ms-correlation-id" of "t-00002"', () =>
+                              expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-ms-correlation-id')).toBe(
                                 't-00002'
                               ));
                           } else {
-                            test('without header "x-ms-correlationid"', () =>
-                              expect(httpPostContinue.mock.calls[2][0].request.headers.has('x-ms-correlationId')).toBe(
+                            test('without header "x-ms-correlation-id"', () =>
+                              expect(httpPostContinue.mock.calls[2][0].request.headers.has('x-ms-correlation-id')).toBe(
                                 false
                               ));
                           }
@@ -549,14 +549,14 @@ data: end
                               ));
 
                             if (shouldSetCorrelationId) {
-                              test('with header "x-ms-correlationid" of "t-00002"', () =>
+                              test('with header "x-ms-correlation-id" of "t-00002"', () =>
                                 expect(
-                                  httpPostContinue.mock.calls[3][0].request.headers.get('x-ms-correlationId')
+                                  httpPostContinue.mock.calls[3][0].request.headers.get('x-ms-correlation-id')
                                 ).toBe('t-00002'));
                             } else {
-                              test('without header "x-ms-correlationid"', () =>
+                              test('without header "x-ms-correlation-id"', () =>
                                 expect(
-                                  httpPostContinue.mock.calls[3][0].request.headers.has('x-ms-correlationId')
+                                  httpPostContinue.mock.calls[3][0].request.headers.has('x-ms-correlation-id')
                                 ).toBe(false));
                             }
 
