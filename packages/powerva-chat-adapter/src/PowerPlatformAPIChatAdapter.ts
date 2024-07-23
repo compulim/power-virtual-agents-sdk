@@ -56,7 +56,11 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
 
   public async startNewConversation(
     emitStartConversationEvent: boolean,
-    { locale, signal, correlationId }: { locale?: string; signal?: AbortSignal; correlationId?: string }
+    {
+      correlationId,
+      locale,
+      signal
+    }: { correlationId?: string | undefined; locale?: string | undefined; signal?: AbortSignal | undefined }
   ): Promise<StartResponse> {
     const { baseURL, body, headers } = await this.#strategy.prepareStartNewConversation();
 
@@ -74,7 +78,7 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
   public async executeTurn(
     conversationId: string,
     activity: Activity,
-    { signal, correlationId }: { signal?: AbortSignal, correlationId?: string }
+    { correlationId, signal }: { correlationId?: string | undefined; signal?: AbortSignal | undefined }
   ): Promise<ExecuteTurnResponse> {
     const { baseURL, body, headers } = await this.#strategy.prepareExecuteTurn();
 
@@ -82,7 +86,11 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
       resolveURLWithQueryAndHash(`conversations/${conversationId}`, baseURL),
       {
         body: { ...body, activity },
-        headers: { ...headers, 'x-ms-conversationid': conversationId,  ...(correlationId && { 'x-ms-correlationid': correlationId }) },
+        headers: {
+          ...headers,
+          'x-ms-conversationid': conversationId,
+          ...(correlationId && { 'x-ms-correlationid': correlationId })
+        },
         signal
       }
     );
@@ -94,7 +102,7 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
 
   public async continueTurn(
     conversationId: string,
-    { signal, correlationId }: { signal?: AbortSignal, correlationId?: string }
+    { correlationId, signal }: { correlationId?: string | undefined; signal?: AbortSignal | undefined }
   ): Promise<ExecuteTurnResponse> {
     const { baseURL, body, headers } = await this.#strategy.prepareContinueTurn();
 
@@ -102,7 +110,11 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
       resolveURLWithQueryAndHash(`conversations/${conversationId}/continue`, baseURL),
       {
         body,
-        headers: { ...headers, 'x-ms-conversationid': conversationId,  ...(correlationId && { 'x-ms-correlationid': correlationId }) },
+        headers: {
+          ...headers,
+          'x-ms-conversationid': conversationId,
+          ...(correlationId && { 'x-ms-correlationid': correlationId })
+        },
         signal
       }
     );
