@@ -4,6 +4,7 @@ import pRetry from 'p-retry';
 
 import { type Activity } from '../types/Activity';
 import { type Strategy } from '../types/Strategy';
+import { type Telemetry } from '../types/Telemetry';
 import { type Transport } from '../types/Transport';
 import { resolveURLWithQueryAndHash } from './resolveURLWithQueryAndHash';
 import { parseBotResponse } from './types/BotResponse';
@@ -20,7 +21,7 @@ export type DirectToEngineChatAdapterAPIInit = {
         retries?: number | undefined;
       }>
     | undefined;
-  telemetry?: { trackException(exception: unknown, customProperties?: Record<string, unknown>): void };
+  telemetry?: Telemetry | undefined;
 };
 
 const DEFAULT_RETRY_COUNT = 4; // Will call 5 times.
@@ -133,6 +134,8 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
               'x-ms-chat-adapter',
               new URLSearchParams([['version', process.env.npm_package_version]] satisfies string[][]).toString()
             );
+            const correlationId = this.#telemetry?.correlationId;
+            correlationId && requestHeaders.set('x-ms-correlationid', correlationId);
 
             currentResponse = await fetch(
               resolveURLWithQueryAndHash(baseURL, 'conversations', this.#conversationId, isContinueTurn && 'continue'),
@@ -251,13 +254,10 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
             //              1. We did not handle it, why call it "handledAt"?
             //              2. We should indicate this error is related to the protocol
             error instanceof Error &&
-              telemetry.trackException(
-                { error },
-                {
-                  handledAt: 'withRetries',
-                  retryCount: this.#retry.retries + 1 + ''
-                }
-              );
+              telemetry.trackException(error, {
+                handledAt: 'withRetries',
+                retryCount: this.#retry.retries + 1 + ''
+              });
           });
 
         const activities = asyncGeneratorWithLastValue(await activityGeneratorPromise);

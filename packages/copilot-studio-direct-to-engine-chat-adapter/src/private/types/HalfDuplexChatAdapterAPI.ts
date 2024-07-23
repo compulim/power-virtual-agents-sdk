@@ -1,8 +1,13 @@
 import { type Activity } from '../../types/Activity';
 
 export type StartNewConversationInit = {
+  correlationId?: string | undefined;
   emitStartConversationEvent: boolean;
   locale?: string | undefined;
+};
+
+export type ExecuteTurnInit = {
+  correlationId?: string | undefined;
 };
 
 export interface HalfDuplexChatAdapterAPI {

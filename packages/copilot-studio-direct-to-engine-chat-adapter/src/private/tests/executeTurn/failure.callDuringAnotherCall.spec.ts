@@ -4,6 +4,7 @@ import { setupServer } from 'msw/node';
 
 import type { Activity } from '../../../types/Activity';
 import type { Strategy } from '../../../types/Strategy';
+import type { Telemetry } from '../../../types/Telemetry';
 import DirectToEngineChatAdapterAPI from '../../DirectToEngineChatAdapterAPI';
 import type { BotResponse } from '../../types/BotResponse';
 import { parseConversationId } from '../../types/ConversationId';
@@ -12,7 +13,8 @@ import type { JestMockOf } from '../../types/JestMockOf';
 
 const server = setupServer();
 
-const NOT_MOCKED: DefaultHttpResponseResolver = () => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+const NOT_MOCKED = <T extends (...args: any[]) => any>(..._: Parameters<T>): ReturnType<T> => {
   throw new Error('This function is not mocked.');
 };
 
@@ -45,93 +47,111 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
   });
 
   describe.each([true, false])('With emitStartConversationEvent of %s', emitStartConversationEvent => {
-    let adapter: DirectToEngineChatAdapterAPI;
-    let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
-    let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
-    let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
+    describe.each([
+      ['With', true],
+      ['Without', false]
+    ])('%s correlation ID set', (_, shouldSetCorrelationId) => {
+      let adapter: DirectToEngineChatAdapterAPI;
+      let getCorrelationId: JestMockOf<() => string | undefined>;
+      let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
+      let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
+      let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
+      let trackException: JestMockOf<Telemetry['trackException']>;
 
-    beforeEach(() => {
-      httpPostContinue = jest.fn(NOT_MOCKED);
-      httpPostConversation = jest.fn(NOT_MOCKED);
-      httpPostExecute = jest.fn(NOT_MOCKED);
+      beforeEach(() => {
+        getCorrelationId = jest.fn(() => undefined);
+        httpPostContinue = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+        httpPostConversation = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+        httpPostExecute = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+        trackException = jest.fn(NOT_MOCKED<Telemetry['trackException']>);
 
-      server.use(http.post('http://test/conversations', httpPostConversation));
-      server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
-      server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
+        server.use(http.post('http://test/conversations', httpPostConversation));
+        server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
+        server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
 
-      adapter = new DirectToEngineChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
-    });
+        adapter = new DirectToEngineChatAdapterAPI(strategy, {
+          retry: { factor: 1, minTimeout: 0 },
+          telemetry: {
+            get correlationId() {
+              return getCorrelationId();
+            },
+            trackException
+          }
+        });
+      });
 
-    describe('When conversation started and first turn completed', () => {
-      let activities: Activity[];
+      describe('When conversation started and first turn completed', () => {
+        let activities: Activity[];
 
-      beforeEach(async () => {
-        if (transport === 'auto') {
-          httpPostConversation.mockImplementationOnce(
-            () =>
-              new HttpResponse(
-                Buffer.from(`event: activity
+        beforeEach(async () => {
+          if (transport === 'auto') {
+            httpPostConversation.mockImplementationOnce(
+              () =>
+                new HttpResponse(
+                  Buffer.from(`event: activity
 data: { "from": { "id": "bot" }, "text": "Hello, World!", "type": "message" }
 
 event: end
 data: end
 
 `),
-                { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
-              )
-          );
-        } else if (transport === 'rest') {
-          httpPostConversation.mockImplementationOnce(() =>
-            HttpResponse.json({
-              action: 'waiting',
-              activities: [{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }],
-              conversationId: parseConversationId('c-00001')
-            } satisfies BotResponse)
-          );
-        }
+                  { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
+                )
+            );
+          } else if (transport === 'rest') {
+            httpPostConversation.mockImplementationOnce(() =>
+              HttpResponse.json({
+                action: 'waiting',
+                activities: [{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }],
+                conversationId: parseConversationId('c-00001')
+              } satisfies BotResponse)
+            );
+          }
 
-        const startNewConversationResult = adapter.startNewConversation({ emitStartConversationEvent });
+          shouldSetCorrelationId && getCorrelationId.mockImplementation(() => 't-00001');
 
-        activities = await asyncIteratorToArray(startNewConversationResult);
-      });
+          const startNewConversationResult = adapter.startNewConversation({ emitStartConversationEvent });
 
-      test('should receive greeting activities', () =>
-        expect(activities).toEqual([{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }]));
-
-      describe('when execute turn', () => {
-        let executeTurnResult: ReturnType<DirectToEngineChatAdapterAPI['executeTurn']>;
-
-        beforeEach(() => {
-          executeTurnResult = adapter.executeTurn({ from: { id: 'u-00001' }, text: 'Aloha!', type: 'message' });
+          activities = await asyncIteratorToArray(startNewConversationResult);
         });
 
-        describe('when call executeTurn again', () => {
-          let errorThrown: unknown;
+        test('should receive greeting activities', () =>
+          expect(activities).toEqual([{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }]));
+
+        describe('when execute turn', () => {
+          let executeTurnResult: ReturnType<DirectToEngineChatAdapterAPI['executeTurn']>;
 
           beforeEach(() => {
-            try {
-              adapter.executeTurn({ from: { id: 'u-00001' }, text: 'Aloha!', type: 'message' });
-            } catch (error) {
-              errorThrown = error;
-            }
+            executeTurnResult = adapter.executeTurn({ from: { id: 'u-00001' }, text: 'Aloha!', type: 'message' });
           });
 
-          test('should throw', () =>
-            expect(() => {
-              if (errorThrown) {
-                throw errorThrown;
+          describe('when call executeTurn again', () => {
+            let errorThrown: unknown;
+
+            beforeEach(() => {
+              try {
+                adapter.executeTurn({ from: { id: 'u-00001' }, text: 'Aloha!', type: 'message' });
+              } catch (error) {
+                errorThrown = error;
               }
-            }).toThrow('Another operation is in progress.'));
+            });
 
-          describe('when complete iterating the first call', () => {
-            let activities: Activity[];
+            test('should throw', () =>
+              expect(() => {
+                if (errorThrown) {
+                  throw errorThrown;
+                }
+              }).toThrow('Another operation is in progress.'));
 
-            beforeEach(async () => {
-              if (transport === 'auto') {
-                httpPostExecute.mockImplementationOnce(
-                  () =>
-                    new HttpResponse(
-                      Buffer.from(`event: activity
+            describe('when complete iterating the first call', () => {
+              let activities: Activity[];
+
+              beforeEach(async () => {
+                if (transport === 'auto') {
+                  httpPostExecute.mockImplementationOnce(
+                    () =>
+                      new HttpResponse(
+                        Buffer.from(`event: activity
 data: { "from": { "id": "bot" }, "text": "Good morning!", "type": "message" }
 
 event: activity
@@ -141,35 +161,36 @@ event: end
 data: end
 
 `),
-                      { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
-                    )
-                );
-              } else if (transport === 'rest') {
-                httpPostExecute.mockImplementationOnce(() =>
-                  HttpResponse.json({
-                    action: 'continue',
-                    activities: [{ from: { id: 'bot' }, text: 'Good morning!', type: 'message' }],
-                    conversationId: parseConversationId('c-00001')
-                  } satisfies BotResponse)
-                );
+                        { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
+                      )
+                  );
+                } else if (transport === 'rest') {
+                  httpPostExecute.mockImplementationOnce(() =>
+                    HttpResponse.json({
+                      action: 'continue',
+                      activities: [{ from: { id: 'bot' }, text: 'Good morning!', type: 'message' }],
+                      conversationId: parseConversationId('c-00001')
+                    } satisfies BotResponse)
+                  );
 
-                httpPostContinue.mockImplementationOnce(() =>
-                  HttpResponse.json({
-                    action: 'waiting',
-                    activities: [{ from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }],
-                    conversationId: parseConversationId('c-00001')
-                  } satisfies BotResponse)
-                );
-              }
+                  httpPostContinue.mockImplementationOnce(() =>
+                    HttpResponse.json({
+                      action: 'waiting',
+                      activities: [{ from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }],
+                      conversationId: parseConversationId('c-00001')
+                    } satisfies BotResponse)
+                  );
+                }
 
-              activities = await asyncIteratorToArray(executeTurnResult);
+                activities = await asyncIteratorToArray(executeTurnResult);
+              });
+
+              test('should receive all activities', () =>
+                expect(activities).toEqual([
+                  { from: { id: 'bot' }, text: 'Good morning!', type: 'message' },
+                  { from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }
+                ]));
             });
-
-            test('should receive all activities', () =>
-              expect(activities).toEqual([
-                { from: { id: 'bot' }, text: 'Good morning!', type: 'message' },
-                { from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }
-              ]));
           });
         });
       });

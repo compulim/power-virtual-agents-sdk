@@ -11,6 +11,7 @@ import { type Activity } from './types/Activity';
 import { type Attachment } from './types/Attachment';
 import { type DirectLineJSBotConnection } from './types/DirectLineJSBotConnection';
 import { type Strategy, type StrategyRequestInit } from './types/Strategy';
+import { type Telemetry } from './types/Telemetry';
 import { type Transport } from './types/Transport';
 
 declare global {
@@ -33,6 +34,7 @@ export type {
   ExecuteTurnFunction,
   Strategy,
   StrategyRequestInit,
+  Telemetry,
   Transport,
   TurnGenerator
 };

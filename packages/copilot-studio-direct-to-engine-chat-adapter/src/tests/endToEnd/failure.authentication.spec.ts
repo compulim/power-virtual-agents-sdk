@@ -10,10 +10,12 @@ import toDirectLineJS from '../../toDirectLineJS';
 import type { Activity } from '../../types/Activity';
 import type { DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
 import type { Strategy } from '../../types/Strategy';
+import type { Telemetry } from '../../types/Telemetry';
 
 const server = setupServer();
 
-const NOT_MOCKED: DefaultHttpResponseResolver = () => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+const NOT_MOCKED = <T extends (...args: any[]) => any>(..._: Parameters<T>): ReturnType<T> => {
   throw new Error('This function is not mocked.');
 };
 
@@ -49,54 +51,84 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
   });
 
   describe.each([true, false])('with emitStartConversationEvent of %s', emitStartConversationEvent => {
-    let directLineJS: DirectLineJSBotConnection;
-    let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
-
-    beforeEach(() => {
-      httpPostConversation = jest.fn(NOT_MOCKED);
-
-      server.use(http.post('http://test/conversations', httpPostConversation));
-
-      const chatAdapter = createHalfDuplexChatAdapter(strategy, {
-        emitStartConversationEvent,
-        locale: 'ja-JP',
-        retry: { factor: 1, minTimeout: 0 }
-      });
-
-      directLineJS = toDirectLineJS(chatAdapter);
-    });
-
-    test('should not POST to /conversations', () => expect(httpPostConversation).toHaveBeenCalledTimes(0));
-
-    describe('when subscribe', () => {
-      let activityObserver: JestMockOf<(activity: Activity) => void>;
-      let connectionStatusObserver: JestMockOf<(connectionStatus: ConnectionStatus) => void>;
-      let connectionStatusQueue: DeferredQueue<ConnectionStatus>;
+    describe.each([
+      ['With', true],
+      ['Without', false]
+    ])('%s correlation ID set', (_, shouldSetCorrelationId) => {
+      let directLineJS: DirectLineJSBotConnection;
+      let getCorrelationId: JestMockOf<() => string | undefined>;
+      let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
+      let trackException: JestMockOf<Telemetry['trackException']>;
 
       beforeEach(() => {
-        httpPostConversation.mockImplementationOnce(() => new HttpResponse(undefined, { status: 403 }));
+        getCorrelationId = jest.fn(() => undefined);
+        httpPostConversation = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+        trackException = jest.fn(NOT_MOCKED<Telemetry['trackException']>);
 
-        connectionStatusQueue = new DeferredQueue();
+        server.use(http.post('http://test/conversations', httpPostConversation));
 
-        activityObserver = jest.fn();
-        connectionStatusObserver = jest.fn(connectionStatusQueue.push.bind(connectionStatusQueue));
-
-        directLineJS.connectionStatus$.subscribe(connectionStatusObserver);
-        directLineJS.activity$.subscribe(activityObserver);
-      });
-
-      describe('wait until 3 connection statuses are observed', () => {
-        beforeEach(async () => {
-          await connectionStatusQueue.promise;
-          await connectionStatusQueue.promise;
-          await connectionStatusQueue.promise;
+        const chatAdapter = createHalfDuplexChatAdapter(strategy, {
+          emitStartConversationEvent,
+          locale: 'ja-JP',
+          retry: { factor: 1, minTimeout: 0 },
+          telemetry: {
+            get correlationId() {
+              return getCorrelationId();
+            },
+            trackException
+          }
         });
 
-        describe('should call connection status observer', () => {
-          test('3 times', () => expect(connectionStatusObserver).toHaveBeenCalledTimes(3));
-          test('with "Uninitialized"', () => expect(connectionStatusObserver).toHaveBeenNthCalledWith(1, 0));
-          test('with "Connecting"', () => expect(connectionStatusObserver).toHaveBeenNthCalledWith(2, 1));
-          test('with "FailedToConnect"', () => expect(connectionStatusObserver).toHaveBeenNthCalledWith(3, 4));
+        directLineJS = toDirectLineJS(chatAdapter);
+      });
+
+      test('should not POST to /conversations', () => expect(httpPostConversation).toHaveBeenCalledTimes(0));
+
+      describe('when subscribe', () => {
+        let activityObserver: JestMockOf<(activity: Activity) => void>;
+        let connectionStatusObserver: JestMockOf<(connectionStatus: ConnectionStatus) => void>;
+        let connectionStatusQueue: DeferredQueue<ConnectionStatus>;
+
+        beforeEach(() => {
+          httpPostConversation.mockImplementationOnce(() => new HttpResponse(undefined, { status: 403 }));
+          trackException.mockImplementationOnce(() => {});
+
+          shouldSetCorrelationId && getCorrelationId.mockImplementation(() => 't-00001');
+          connectionStatusQueue = new DeferredQueue();
+
+          activityObserver = jest.fn();
+          connectionStatusObserver = jest.fn(connectionStatusQueue.push.bind(connectionStatusQueue));
+
+          directLineJS.connectionStatus$.subscribe(connectionStatusObserver);
+          directLineJS.activity$.subscribe(activityObserver);
+        });
+
+        describe('wait until 3 connection statuses are observed', () => {
+          beforeEach(async () => {
+            await connectionStatusQueue.promise;
+            await connectionStatusQueue.promise;
+            await connectionStatusQueue.promise;
+          });
+
+          describe('should call connection status observer', () => {
+            test('3 times', () => expect(connectionStatusObserver).toHaveBeenCalledTimes(3));
+            test('with "Uninitialized"', () => expect(connectionStatusObserver).toHaveBeenNthCalledWith(1, 0));
+            test('with "Connecting"', () => expect(connectionStatusObserver).toHaveBeenNthCalledWith(2, 1));
+            test('with "FailedToConnect"', () => expect(connectionStatusObserver).toHaveBeenNthCalledWith(3, 4));
+          });
+
+          describe('should call trackException', () => {
+            test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
+            test('with arguments', () =>
+              expect(trackException).toHaveBeenNthCalledWith(
+                1,
+                expect.any(Error),
+                expect.objectContaining({
+                  handledAt: 'withRetries',
+                  retryCount: '5'
+                })
+              ));
+          });
         });
       });
     });

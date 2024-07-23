@@ -11,10 +11,12 @@ import type { DefaultHttpResponseResolver } from '../../private/types/DefaultHtt
 import type { JestMockOf } from '../../private/types/JestMockOf';
 import type { Activity } from '../../types/Activity';
 import type { Strategy } from '../../types/Strategy';
+import type { Telemetry } from '../../types/Telemetry';
 
 const server = setupServer();
 
-const NOT_MOCKED: DefaultHttpResponseResolver = () => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+const NOT_MOCKED = <T extends (...args: any[]) => any>(..._: Parameters<T>): ReturnType<T> => {
   throw new Error('This function is not mocked.');
 };
 
@@ -47,39 +49,53 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
   });
 
   describe.each([true, false])('With emitStartConversationEvent of %s', emitStartConversationEvent => {
-    let generator: TurnGenerator;
-    let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
-    let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
-    let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
+    describe.each([
+      ['With', true],
+      ['Without', false]
+    ])('%s correlation ID set', (_, shouldSetCorrelationId) => {
+      let generator: TurnGenerator;
+      let getCorrelationId: JestMockOf<() => string | undefined>;
+      let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
+      let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
+      let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
+      let trackException: JestMockOf<Telemetry['trackException']>;
 
-    beforeEach(() => {
-      httpPostContinue = jest.fn(NOT_MOCKED);
-      httpPostConversation = jest.fn(NOT_MOCKED);
-      httpPostExecute = jest.fn(NOT_MOCKED);
+      beforeEach(() => {
+        getCorrelationId = jest.fn(() => undefined);
+        httpPostContinue = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+        httpPostConversation = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+        httpPostExecute = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+        trackException = jest.fn(NOT_MOCKED<Telemetry['trackException']>);
 
-      server.use(http.post('http://test/conversations', httpPostConversation));
-      server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
-      server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
+        server.use(http.post('http://test/conversations', httpPostConversation));
+        server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
+        server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
 
-      generator = createHalfDuplexChatAdapter(strategy, {
-        emitStartConversationEvent,
-        locale: 'ja-JP',
-        retry: { factor: 1, minTimeout: 0 }
+        generator = createHalfDuplexChatAdapter(strategy, {
+          emitStartConversationEvent,
+          locale: 'ja-JP',
+          retry: { factor: 1, minTimeout: 0 },
+          telemetry: {
+            get correlationId() {
+              return getCorrelationId();
+            },
+            trackException
+          }
+        });
       });
-    });
 
-    describe('When conversation started and bot returned with 3 activities in 3 turns', () => {
-      test('should not POST to /conversations', () => expect(httpPostConversation).toHaveBeenCalledTimes(0));
+      describe('When conversation started and bot returned with 3 activities in 3 turns', () => {
+        test('should not POST to /conversations', () => expect(httpPostConversation).toHaveBeenCalledTimes(0));
 
-      describe('after iterate once', () => {
-        let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
+        describe('after iterate once', () => {
+          let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
 
-        beforeEach(async () => {
-          if (transport === 'auto') {
-            httpPostConversation.mockImplementationOnce(
-              () =>
-                new HttpResponse(
-                  Buffer.from(`event: activity
+          beforeEach(async () => {
+            if (transport === 'auto') {
+              httpPostConversation.mockImplementationOnce(
+                () =>
+                  new HttpResponse(
+                    Buffer.from(`event: activity
 data: { "from": { "id": "bot" }, "text": "Hello, World!", "type": "message" }
 
 event: activity
@@ -92,121 +108,89 @@ event: end
 data: end
 
 `),
-                  { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
-                )
-            );
-          } else if (transport === 'rest') {
-            httpPostConversation.mockImplementationOnce(() =>
-              HttpResponse.json({
-                action: 'continue',
-                activities: [{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }],
-                conversationId: parseConversationId('c-00001')
-              } satisfies BotResponse)
-            );
-          }
-
-          iteratorResult = await generator.next();
-        });
-
-        describe('should have POST to /conversations', () => {
-          test('once', () => expect(httpPostConversation).toHaveBeenCalledTimes(1));
-
-          test('with query "api" of "start"', () =>
-            expect(new URL(httpPostConversation.mock.calls[0][0].request.url)).toHaveProperty('search', '?api=start'));
-
-          test('with hash of "#1"', () =>
-            expect(new URL(httpPostConversation.mock.calls[0][0].request.url)).toHaveProperty('hash', '#1'));
-
-          if (transport === 'auto') {
-            test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
-              expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe(
-                'text/event-stream,application/json;q=0.9'
-              ));
-          } else if (transport === 'rest') {
-            test('with header "Accept" of "application/json"', () =>
-              expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
-          }
-
-          test('with header "Content-Type" of "application/json"', () =>
-            expect(httpPostConversation.mock.calls[0][0].request.headers.get('content-type')).toBe('application/json'));
-
-          test('with header "x-dummy" of "dummy"', () =>
-            expect(httpPostConversation.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
-
-          test('without header "x-ms-conversationid"', () =>
-            expect(httpPostConversation.mock.calls[0][0].request.headers.has('x-ms-conversationid')).toBe(false));
-
-          test(`with JSON body of { dummy: "dummy", emitStartConversationEvent: ${emitStartConversationEvent}, locale: 'ja-JP' }`, () =>
-            expect(httpPostConversation.mock.calls[0][0].request.json()).resolves.toEqual({
-              dummy: 'dummy',
-              emitStartConversationEvent,
-              locale: 'ja-JP'
-            }));
-        });
-
-        test('should return the first activity', () =>
-          expect(iteratorResult).toEqual({
-            done: false,
-            value: { from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }
-          }));
-
-        describe('after iterate twice', () => {
-          let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
-
-          beforeEach(async () => {
-            if (transport === 'rest') {
-              httpPostContinue.mockImplementationOnce(() =>
+                    { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
+                  )
+              );
+            } else if (transport === 'rest') {
+              httpPostConversation.mockImplementationOnce(() =>
                 HttpResponse.json({
                   action: 'continue',
-                  activities: [{ from: { id: 'bot' }, text: 'Aloha!', type: 'message' }]
+                  activities: [{ from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }],
+                  conversationId: parseConversationId('c-00001')
                 } satisfies BotResponse)
               );
             }
 
+            shouldSetCorrelationId && getCorrelationId.mockImplementation(() => 't-00001');
             iteratorResult = await generator.next();
           });
 
-          if (transport === 'rest') {
-            describe('should have POST to /conversations/c-00001/continue', () => {
-              test('once', () => expect(httpPostContinue).toHaveBeenCalledTimes(1));
+          describe('should have POST to /conversations', () => {
+            test('once', () => expect(httpPostConversation).toHaveBeenCalledTimes(1));
 
-              test('with query "api" of "start"', () =>
-                expect(new URL(httpPostContinue.mock.calls[0][0].request.url)).toHaveProperty('search', '?api=start'));
+            test('with query "api" of "start"', () =>
+              expect(new URL(httpPostConversation.mock.calls[0][0].request.url)).toHaveProperty(
+                'search',
+                '?api=start'
+              ));
 
-              test('with hash of "#1"', () =>
-                expect(new URL(httpPostContinue.mock.calls[0][0].request.url)).toHaveProperty('hash', '#1'));
+            test('with hash of "#1"', () =>
+              expect(new URL(httpPostConversation.mock.calls[0][0].request.url)).toHaveProperty('hash', '#1'));
 
-              test('with header "Content-Type" of "application/json"', () =>
-                expect(httpPostContinue.mock.calls[0][0].request.headers.get('content-type')).toBe('application/json'));
+            if (transport === 'auto') {
+              test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
+                expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe(
+                  'text/event-stream,application/json;q=0.9'
+                ));
+            } else if (transport === 'rest') {
+              test('with header "Accept" of "application/json"', () =>
+                expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
+            }
 
-              test('with header "x-dummy" of "dummy"', () =>
-                expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
+            test('with header "Content-Type" of "application/json"', () =>
+              expect(httpPostConversation.mock.calls[0][0].request.headers.get('content-type')).toBe(
+                'application/json'
+              ));
 
-              test('with header "x-ms-conversationid" of "c-00001"', () =>
-                expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe('c-00001'));
+            test('with header "x-dummy" of "dummy"', () =>
+              expect(httpPostConversation.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
 
-              test('with JSON body of { dummy: "dummy" }', () =>
-                expect(httpPostContinue.mock.calls[0][0].request.json()).resolves.toEqual({
-                  dummy: 'dummy'
-                }));
-            });
-          }
+            test('without header "x-ms-conversationid"', () =>
+              expect(httpPostConversation.mock.calls[0][0].request.headers.has('x-ms-conversationid')).toBe(false));
 
-          test('should return the second activity', () =>
+            if (shouldSetCorrelationId) {
+              test('with header "x-ms-correlationid" of "t-00001"', () =>
+                expect(httpPostConversation.mock.calls[0][0].request.headers.get('x-ms-correlationId')).toBe(
+                  't-00001'
+                ));
+            } else {
+              test('without header "x-ms-correlationid"', () =>
+                expect(httpPostConversation.mock.calls[0][0].request.headers.has('x-ms-correlationId')).toBe(false));
+            }
+
+            test(`with JSON body of { dummy: "dummy", emitStartConversationEvent: ${emitStartConversationEvent}, locale: 'ja-JP' }`, () =>
+              expect(httpPostConversation.mock.calls[0][0].request.json()).resolves.toEqual({
+                dummy: 'dummy',
+                emitStartConversationEvent,
+                locale: 'ja-JP'
+              }));
+          });
+
+          test('should return the first activity', () =>
             expect(iteratorResult).toEqual({
               done: false,
-              value: { from: { id: 'bot' }, text: 'Aloha!', type: 'message' }
+              value: { from: { id: 'bot' }, text: 'Hello, World!', type: 'message' }
             }));
 
-          describe('after iterate the third time', () => {
+          describe('after iterate twice', () => {
             let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
 
             beforeEach(async () => {
               if (transport === 'rest') {
                 httpPostContinue.mockImplementationOnce(() =>
                   HttpResponse.json({
-                    action: 'waiting',
-                    activities: [{ from: { id: 'bot' }, text: '您好！', type: 'message' }]
+                    action: 'continue',
+                    activities: [{ from: { id: 'bot' }, text: 'Aloha!', type: 'message' }]
                   } satisfies BotResponse)
                 );
               }
@@ -216,74 +200,150 @@ data: end
 
             if (transport === 'rest') {
               describe('should have POST to /conversations/c-00001/continue', () => {
-                test('once', () => expect(httpPostContinue).toHaveBeenCalledTimes(2));
+                test('once', () => expect(httpPostContinue).toHaveBeenCalledTimes(1));
 
                 test('with query "api" of "start"', () =>
-                  expect(new URL(httpPostContinue.mock.calls[1][0].request.url)).toHaveProperty(
+                  expect(new URL(httpPostContinue.mock.calls[0][0].request.url)).toHaveProperty(
                     'search',
                     '?api=start'
                   ));
 
                 test('with hash of "#1"', () =>
-                  expect(new URL(httpPostContinue.mock.calls[1][0].request.url)).toHaveProperty('hash', '#1'));
+                  expect(new URL(httpPostContinue.mock.calls[0][0].request.url)).toHaveProperty('hash', '#1'));
 
                 test('with header "Content-Type" of "application/json"', () =>
-                  expect(httpPostContinue.mock.calls[1][0].request.headers.get('content-type')).toBe(
+                  expect(httpPostContinue.mock.calls[0][0].request.headers.get('content-type')).toBe(
                     'application/json'
                   ));
 
                 test('with header "x-dummy" of "dummy"', () =>
-                  expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-dummy')).toBe('dummy'));
+                  expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
 
                 test('with header "x-ms-conversationid" of "c-00001"', () =>
-                  expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-ms-conversationid')).toBe('c-00001'));
+                  expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe('c-00001'));
+
+                if (shouldSetCorrelationId) {
+                  test('with header "x-ms-correlationid" of "t-00001"', () =>
+                    expect(httpPostContinue.mock.calls[0][0].request.headers.get('x-ms-correlationId')).toBe(
+                      't-00001'
+                    ));
+                } else {
+                  test('without header "x-ms-correlationid"', () =>
+                    expect(httpPostContinue.mock.calls[0][0].request.headers.has('x-ms-correlationId')).toBe(false));
+                }
 
                 test('with JSON body of { dummy: "dummy" }', () =>
-                  expect(httpPostContinue.mock.calls[1][0].request.json()).resolves.toEqual({
+                  expect(httpPostContinue.mock.calls[0][0].request.json()).resolves.toEqual({
                     dummy: 'dummy'
                   }));
               });
             }
 
-            test('should return the third activity', () =>
+            test('should return the second activity', () =>
               expect(iteratorResult).toEqual({
                 done: false,
-                value: { from: { id: 'bot' }, text: '您好！', type: 'message' }
+                value: { from: { id: 'bot' }, text: 'Aloha!', type: 'message' }
               }));
 
-            describe('after iterate the fourth time', () => {
+            describe('after iterate the third time', () => {
               let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
 
               beforeEach(async () => {
+                if (transport === 'rest') {
+                  httpPostContinue.mockImplementationOnce(() =>
+                    HttpResponse.json({
+                      action: 'waiting',
+                      activities: [{ from: { id: 'bot' }, text: '您好！', type: 'message' }]
+                    } satisfies BotResponse)
+                  );
+                }
+
                 iteratorResult = await generator.next();
               });
 
-              test('should complete and return the next execute function', () =>
-                expect(iteratorResult).toEqual({ done: true, value: expect.any(Function) }));
+              if (transport === 'rest') {
+                describe('should have POST to /conversations/c-00001/continue', () => {
+                  test('once', () => expect(httpPostContinue).toHaveBeenCalledTimes(2));
 
-              describe('when execute turn and bot returned 3 activities in 3 turns', () => {
-                let generator: TurnGenerator;
+                  test('with query "api" of "start"', () =>
+                    expect(new URL(httpPostContinue.mock.calls[1][0].request.url)).toHaveProperty(
+                      'search',
+                      '?api=start'
+                    ));
 
-                beforeEach(() => {
-                  generator = (iteratorResult.value as ExecuteTurnFunction)({
-                    from: { id: 'u-00001' },
-                    text: 'Morning.',
-                    type: 'message'
-                  });
+                  test('with hash of "#1"', () =>
+                    expect(new URL(httpPostContinue.mock.calls[1][0].request.url)).toHaveProperty('hash', '#1'));
+
+                  test('with header "Content-Type" of "application/json"', () =>
+                    expect(httpPostContinue.mock.calls[1][0].request.headers.get('content-type')).toBe(
+                      'application/json'
+                    ));
+
+                  test('with header "x-dummy" of "dummy"', () =>
+                    expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-dummy')).toBe('dummy'));
+
+                  test('with header "x-ms-conversationid" of "c-00001"', () =>
+                    expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-ms-conversationid')).toBe(
+                      'c-00001'
+                    ));
+
+                  if (shouldSetCorrelationId) {
+                    test('with header "x-ms-correlationid" of "t-00001"', () =>
+                      expect(httpPostContinue.mock.calls[1][0].request.headers.get('x-ms-correlationId')).toBe(
+                        't-00001'
+                      ));
+                  } else {
+                    test('without header "x-ms-correlationid"', () =>
+                      expect(httpPostContinue.mock.calls[1][0].request.headers.has('x-ms-correlationId')).toBe(false));
+                  }
+
+                  test('with JSON body of { dummy: "dummy" }', () =>
+                    expect(httpPostContinue.mock.calls[1][0].request.json()).resolves.toEqual({
+                      dummy: 'dummy'
+                    }));
+                });
+              }
+
+              test('should return the third activity', () =>
+                expect(iteratorResult).toEqual({
+                  done: false,
+                  value: { from: { id: 'bot' }, text: '您好！', type: 'message' }
+                }));
+
+              describe('after iterate the fourth time', () => {
+                let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
+
+                beforeEach(async () => {
+                  iteratorResult = await generator.next();
                 });
 
-                test('should not POST to /conversations/c-00001', () =>
-                  expect(httpPostExecute).toHaveBeenCalledTimes(0));
+                test('should complete and return the next execute function', () =>
+                  expect(iteratorResult).toEqual({ done: true, value: expect.any(Function) }));
 
-                describe('after iterate once', () => {
-                  let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
+                describe('when execute turn and bot returned 3 activities in 3 turns', () => {
+                  let generator: TurnGenerator;
 
-                  beforeEach(async () => {
-                    if (transport === 'auto') {
-                      httpPostExecute.mockImplementationOnce(
-                        () =>
-                          new HttpResponse(
-                            Buffer.from(`event: activity
+                  beforeEach(() => {
+                    shouldSetCorrelationId && getCorrelationId.mockReset().mockImplementation(() => 't-00002');
+                    generator = (iteratorResult.value as ExecuteTurnFunction)({
+                      from: { id: 'u-00001' },
+                      text: 'Morning.',
+                      type: 'message'
+                    });
+                  });
+
+                  test('should not POST to /conversations/c-00001', () =>
+                    expect(httpPostExecute).toHaveBeenCalledTimes(0));
+
+                  describe('after iterate once', () => {
+                    let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
+
+                    beforeEach(async () => {
+                      if (transport === 'auto') {
+                        httpPostExecute.mockImplementationOnce(
+                          () =>
+                            new HttpResponse(
+                              Buffer.from(`event: activity
 data: { "from": { "id": "bot" }, "text": "Good morning!", "type": "message" }
 
 event: activity
@@ -296,80 +356,14 @@ event: end
 data: end
 
 `),
-                            { headers: { 'content-type': 'text/event-stream' } }
-                          )
-                      );
-                    } else if (transport === 'rest') {
-                      httpPostExecute.mockImplementationOnce(() =>
-                        HttpResponse.json({
-                          action: 'continue',
-                          activities: [{ from: { id: 'bot' }, text: 'Good morning!', type: 'message' }]
-                        } satisfies BotResponse)
-                      );
-                    }
-
-                    iteratorResult = await generator.next();
-                  });
-
-                  describe('should have POST to /conversations/c-00001', () => {
-                    test('once', () => expect(httpPostExecute).toHaveBeenCalledTimes(1));
-
-                    test('with query "api" of "execute"', () =>
-                      expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty(
-                        'search',
-                        '?api=execute'
-                      ));
-
-                    test('with hash of "#2"', () =>
-                      expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty('hash', '#2'));
-
-                    if (transport === 'auto') {
-                      test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
-                        expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
-                          'text/event-stream,application/json;q=0.9'
-                        ));
-                    } else if (transport === 'rest') {
-                      test('with header "Accept" of "application/json"', () =>
-                        expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
-                          'application/json'
-                        ));
-                    }
-
-                    test('with header "Content-Type" of "application/json"', () =>
-                      expect(httpPostExecute.mock.calls[0][0].request.headers.get('content-type')).toBe(
-                        'application/json'
-                      ));
-
-                    test('with header "x-dummy" of "dummy"', () =>
-                      expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
-
-                    test('with header "x-ms-conversationid" of "c-00001"', () =>
-                      expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe(
-                        'c-00001'
-                      ));
-
-                    test('with JSON body of activity and { dummy: "dummy" }', () =>
-                      expect(httpPostExecute.mock.calls[0][0].request.json()).resolves.toEqual({
-                        activity: { from: { id: 'u-00001' }, text: 'Morning.', type: 'message' },
-                        dummy: 'dummy'
-                      }));
-                  });
-
-                  test('should return the third activity', () =>
-                    expect(iteratorResult).toEqual({
-                      done: false,
-                      value: { from: { id: 'bot' }, text: 'Good morning!', type: 'message' }
-                    }));
-
-                  describe('after iterate twice', () => {
-                    let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
-
-                    beforeEach(async () => {
-                      if (transport === 'rest') {
-                        httpPostContinue.mockImplementationOnce(() =>
+                              { headers: { 'content-type': 'text/event-stream' } }
+                            )
+                        );
+                      } else if (transport === 'rest') {
+                        httpPostExecute.mockImplementationOnce(() =>
                           HttpResponse.json({
                             action: 'continue',
-                            activities: [{ from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }]
+                            activities: [{ from: { id: 'bot' }, text: 'Good morning!', type: 'message' }]
                           } satisfies BotResponse)
                         );
                       }
@@ -377,54 +371,77 @@ data: end
                       iteratorResult = await generator.next();
                     });
 
-                    if (transport === 'rest') {
-                      describe('should have POST to /conversations/c-00001/continue', () => {
-                        test('twice', () => expect(httpPostContinue).toHaveBeenCalledTimes(3));
+                    describe('should have POST to /conversations/c-00001', () => {
+                      test('once', () => expect(httpPostExecute).toHaveBeenCalledTimes(1));
 
-                        test('with query "api" of "execute"', () =>
-                          expect(new URL(httpPostContinue.mock.calls[2][0].request.url)).toHaveProperty(
-                            'search',
-                            '?api=execute'
+                      test('with query "api" of "execute"', () =>
+                        expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty(
+                          'search',
+                          '?api=execute'
+                        ));
+
+                      test('with hash of "#2"', () =>
+                        expect(new URL(httpPostExecute.mock.calls[0][0].request.url)).toHaveProperty('hash', '#2'));
+
+                      if (transport === 'auto') {
+                        test('with header "Accept" of "text/event-stream,application/json;q=0.9"', () =>
+                          expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
+                            'text/event-stream,application/json;q=0.9'
                           ));
-
-                        test('with hash of "#2"', () =>
-                          expect(new URL(httpPostContinue.mock.calls[2][0].request.url)).toHaveProperty('hash', '#2'));
-
-                        test('with header "Content-Type" of "application/json"', () =>
-                          expect(httpPostContinue.mock.calls[2][0].request.headers.get('content-type')).toBe(
+                      } else if (transport === 'rest') {
+                        test('with header "Accept" of "application/json"', () =>
+                          expect(httpPostExecute.mock.calls[0][0].request.headers.get('accept')).toBe(
                             'application/json'
                           ));
+                      }
 
-                        test('with header "x-dummy" of "dummy"', () =>
-                          expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-dummy')).toBe('dummy'));
+                      test('with header "Content-Type" of "application/json"', () =>
+                        expect(httpPostExecute.mock.calls[0][0].request.headers.get('content-type')).toBe(
+                          'application/json'
+                        ));
 
-                        test('with header "x-ms-conversationid" of "c-00001"', () =>
-                          expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-ms-conversationid')).toBe(
-                            'c-00001'
+                      test('with header "x-dummy" of "dummy"', () =>
+                        expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-dummy')).toBe('dummy'));
+
+                      test('with header "x-ms-conversationid" of "c-00001"', () =>
+                        expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-conversationid')).toBe(
+                          'c-00001'
+                        ));
+
+                      if (shouldSetCorrelationId) {
+                        test('with header "x-ms-correlationid" of "t-00002"', () =>
+                          expect(httpPostExecute.mock.calls[0][0].request.headers.get('x-ms-correlationId')).toBe(
+                            't-00002'
                           ));
+                      } else {
+                        test('without header "x-ms-correlationid"', () =>
+                          expect(httpPostExecute.mock.calls[0][0].request.headers.has('x-ms-correlationId')).toBe(
+                            false
+                          ));
+                      }
 
-                        test('with JSON body of { dummy: "dummy" }', () =>
-                          expect(httpPostContinue.mock.calls[2][0].request.json()).resolves.toEqual({
-                            dummy: 'dummy'
-                          }));
-                      });
-                    }
+                      test('with JSON body of activity and { dummy: "dummy" }', () =>
+                        expect(httpPostExecute.mock.calls[0][0].request.json()).resolves.toEqual({
+                          activity: { from: { id: 'u-00001' }, text: 'Morning.', type: 'message' },
+                          dummy: 'dummy'
+                        }));
+                    });
 
-                    test('should return the fifth activity', () =>
+                    test('should return the third activity', () =>
                       expect(iteratorResult).toEqual({
                         done: false,
-                        value: { from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }
+                        value: { from: { id: 'bot' }, text: 'Good morning!', type: 'message' }
                       }));
 
-                    describe('after iterate the third time', () => {
+                    describe('after iterate twice', () => {
                       let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
 
                       beforeEach(async () => {
                         if (transport === 'rest') {
                           httpPostContinue.mockImplementationOnce(() =>
                             HttpResponse.json({
-                              action: 'waiting',
-                              activities: [{ from: { id: 'bot' }, text: '再見！', type: 'message' }]
+                              action: 'continue',
+                              activities: [{ from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }]
                             } satisfies BotResponse)
                           );
                         }
@@ -434,55 +451,138 @@ data: end
 
                       if (transport === 'rest') {
                         describe('should have POST to /conversations/c-00001/continue', () => {
-                          test('twice', () => expect(httpPostContinue).toHaveBeenCalledTimes(4));
+                          test('twice', () => expect(httpPostContinue).toHaveBeenCalledTimes(3));
 
                           test('with query "api" of "execute"', () =>
-                            expect(new URL(httpPostContinue.mock.calls[3][0].request.url)).toHaveProperty(
+                            expect(new URL(httpPostContinue.mock.calls[2][0].request.url)).toHaveProperty(
                               'search',
                               '?api=execute'
                             ));
 
                           test('with hash of "#2"', () =>
-                            expect(new URL(httpPostContinue.mock.calls[3][0].request.url)).toHaveProperty(
+                            expect(new URL(httpPostContinue.mock.calls[2][0].request.url)).toHaveProperty(
                               'hash',
                               '#2'
                             ));
 
                           test('with header "Content-Type" of "application/json"', () =>
-                            expect(httpPostContinue.mock.calls[3][0].request.headers.get('content-type')).toBe(
+                            expect(httpPostContinue.mock.calls[2][0].request.headers.get('content-type')).toBe(
                               'application/json'
                             ));
 
                           test('with header "x-dummy" of "dummy"', () =>
-                            expect(httpPostContinue.mock.calls[3][0].request.headers.get('x-dummy')).toBe('dummy'));
+                            expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-dummy')).toBe('dummy'));
 
                           test('with header "x-ms-conversationid" of "c-00001"', () =>
-                            expect(httpPostContinue.mock.calls[3][0].request.headers.get('x-ms-conversationid')).toBe(
+                            expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-ms-conversationid')).toBe(
                               'c-00001'
                             ));
 
+                          if (shouldSetCorrelationId) {
+                            test('with header "x-ms-correlationid" of "t-00002"', () =>
+                              expect(httpPostContinue.mock.calls[2][0].request.headers.get('x-ms-correlationId')).toBe(
+                                't-00002'
+                              ));
+                          } else {
+                            test('without header "x-ms-correlationid"', () =>
+                              expect(httpPostContinue.mock.calls[2][0].request.headers.has('x-ms-correlationId')).toBe(
+                                false
+                              ));
+                          }
+
                           test('with JSON body of { dummy: "dummy" }', () =>
-                            expect(httpPostContinue.mock.calls[3][0].request.json()).resolves.toEqual({
+                            expect(httpPostContinue.mock.calls[2][0].request.json()).resolves.toEqual({
                               dummy: 'dummy'
                             }));
                         });
                       }
 
-                      test('should return the sixth activity', () =>
+                      test('should return the fifth activity', () =>
                         expect(iteratorResult).toEqual({
                           done: false,
-                          value: { from: { id: 'bot' }, text: '再見！', type: 'message' }
+                          value: { from: { id: 'bot' }, text: 'Goodbye!', type: 'message' }
                         }));
 
-                      describe('after iterate the fourth time', () => {
+                      describe('after iterate the third time', () => {
                         let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
 
                         beforeEach(async () => {
+                          if (transport === 'rest') {
+                            httpPostContinue.mockImplementationOnce(() =>
+                              HttpResponse.json({
+                                action: 'waiting',
+                                activities: [{ from: { id: 'bot' }, text: '再見！', type: 'message' }]
+                              } satisfies BotResponse)
+                            );
+                          }
+
                           iteratorResult = await generator.next();
                         });
 
-                        test('should complete', () =>
-                          expect(iteratorResult).toEqual({ done: true, value: expect.any(Function) }));
+                        if (transport === 'rest') {
+                          describe('should have POST to /conversations/c-00001/continue', () => {
+                            test('twice', () => expect(httpPostContinue).toHaveBeenCalledTimes(4));
+
+                            test('with query "api" of "execute"', () =>
+                              expect(new URL(httpPostContinue.mock.calls[3][0].request.url)).toHaveProperty(
+                                'search',
+                                '?api=execute'
+                              ));
+
+                            test('with hash of "#2"', () =>
+                              expect(new URL(httpPostContinue.mock.calls[3][0].request.url)).toHaveProperty(
+                                'hash',
+                                '#2'
+                              ));
+
+                            test('with header "Content-Type" of "application/json"', () =>
+                              expect(httpPostContinue.mock.calls[3][0].request.headers.get('content-type')).toBe(
+                                'application/json'
+                              ));
+
+                            test('with header "x-dummy" of "dummy"', () =>
+                              expect(httpPostContinue.mock.calls[3][0].request.headers.get('x-dummy')).toBe('dummy'));
+
+                            test('with header "x-ms-conversationid" of "c-00001"', () =>
+                              expect(httpPostContinue.mock.calls[3][0].request.headers.get('x-ms-conversationid')).toBe(
+                                'c-00001'
+                              ));
+
+                            if (shouldSetCorrelationId) {
+                              test('with header "x-ms-correlationid" of "t-00002"', () =>
+                                expect(
+                                  httpPostContinue.mock.calls[3][0].request.headers.get('x-ms-correlationId')
+                                ).toBe('t-00002'));
+                            } else {
+                              test('without header "x-ms-correlationid"', () =>
+                                expect(
+                                  httpPostContinue.mock.calls[3][0].request.headers.has('x-ms-correlationId')
+                                ).toBe(false));
+                            }
+
+                            test('with JSON body of { dummy: "dummy" }', () =>
+                              expect(httpPostContinue.mock.calls[3][0].request.json()).resolves.toEqual({
+                                dummy: 'dummy'
+                              }));
+                          });
+                        }
+
+                        test('should return the sixth activity', () =>
+                          expect(iteratorResult).toEqual({
+                            done: false,
+                            value: { from: { id: 'bot' }, text: '再見！', type: 'message' }
+                          }));
+
+                        describe('after iterate the fourth time', () => {
+                          let iteratorResult: IteratorResult<Activity, ExecuteTurnFunction>;
+
+                          beforeEach(async () => {
+                            iteratorResult = await generator.next();
+                          });
+
+                          test('should complete', () =>
+                            expect(iteratorResult).toEqual({ done: true, value: expect.any(Function) }));
+                        });
                       });
                     });
                   });

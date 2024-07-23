@@ -1,13 +1,14 @@
 import DirectToEngineChatAdapterAPI from './private/DirectToEngineChatAdapterAPI';
-import { type HalfDuplexChatAdapterAPI } from './private/types/HalfDuplexChatAdapterAPI';
+import { type ExecuteTurnInit, type HalfDuplexChatAdapterAPI } from './private/types/HalfDuplexChatAdapterAPI';
 import { type Activity } from './types/Activity';
 import { type Strategy } from './types/Strategy';
+import { type Telemetry } from './types/Telemetry';
 
-type ExecuteTurnFunction = (activity: Activity) => TurnGenerator;
+type ExecuteTurnFunction = (activity: Activity, init?: ExecuteTurnInit | undefined) => TurnGenerator;
 
 type CreateHalfDuplexChatAdapterInit = {
-  emitStartConversationEvent?: boolean;
-  locale?: string;
+  emitStartConversationEvent?: boolean | undefined;
+  locale?: string | undefined;
   retry?:
     | Readonly<{
         factor?: number | undefined;
@@ -17,7 +18,7 @@ type CreateHalfDuplexChatAdapterInit = {
         retries?: number | undefined;
       }>
     | undefined;
-  telemetry?: { trackException(exception: unknown, customProperties?: Record<string, unknown>): void };
+  telemetry?: Telemetry | undefined;
 };
 
 type TurnGenerator = AsyncGenerator<Activity, ExecuteTurnFunction, undefined>;

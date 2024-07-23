@@ -3,13 +3,15 @@ import { setupServer } from 'msw/node';
 
 import type { Activity } from '../../types/Activity';
 import type { Strategy } from '../../types/Strategy';
+import type { Telemetry } from '../../types/Telemetry';
 import DirectToEngineChatAdapterAPI from '../DirectToEngineChatAdapterAPI';
 import type { DefaultHttpResponseResolver } from '../types/DefaultHttpResponseResolver';
 import type { JestMockOf } from '../types/JestMockOf';
 
 const server = setupServer();
 
-const NOT_MOCKED: DefaultHttpResponseResolver = () => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+const NOT_MOCKED = <T extends (...args: any[]) => any>(..._: Parameters<T>): ReturnType<T> => {
   throw new Error('This function is not mocked.');
 };
 
@@ -41,60 +43,92 @@ beforeEach(() => {
 });
 
 describe.each([true, false])('With emitStartConversationEvent of %s', emitStartConversationEvent => {
-  let adapter: DirectToEngineChatAdapterAPI;
-  let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
-  let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
-  let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
-
-  beforeEach(() => {
-    httpPostContinue = jest.fn(NOT_MOCKED);
-    httpPostConversation = jest.fn(NOT_MOCKED);
-    httpPostExecute = jest.fn(NOT_MOCKED);
-
-    server.use(http.post('http://test/conversations', httpPostConversation));
-    server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
-    server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
-
-    adapter = new DirectToEngineChatAdapterAPI(strategy, { retry: { factor: 1, minTimeout: 0 } });
-  });
-
-  describe('When conversation started and bot returned with 1 activity over SSE', () => {
-    let startNewConversationResult: ReturnType<DirectToEngineChatAdapterAPI['startNewConversation']>;
+  describe.each([
+    ['With', true],
+    ['Without', false]
+  ])('%s correlation ID set', (_, shouldSetCorrelationId) => {
+    let adapter: DirectToEngineChatAdapterAPI;
+    let getCorrelationId: JestMockOf<() => string | undefined>;
+    let httpPostContinue: JestMockOf<DefaultHttpResponseResolver>;
+    let httpPostConversation: JestMockOf<DefaultHttpResponseResolver>;
+    let httpPostExecute: JestMockOf<DefaultHttpResponseResolver>;
+    let trackException: JestMockOf<Telemetry['trackException']>;
 
     beforeEach(() => {
-      startNewConversationResult = adapter.startNewConversation({ emitStartConversationEvent });
+      getCorrelationId = jest.fn(() => undefined);
+      httpPostContinue = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+      httpPostConversation = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+      httpPostExecute = jest.fn(NOT_MOCKED<DefaultHttpResponseResolver>);
+      trackException = jest.fn(NOT_MOCKED<Telemetry['trackException']>);
+
+      server.use(http.post('http://test/conversations', httpPostConversation));
+      server.use(http.post('http://test/conversations/c-00001', httpPostExecute));
+      server.use(http.post('http://test/conversations/c-00001/continue', httpPostContinue));
+
+      adapter = new DirectToEngineChatAdapterAPI(strategy, {
+        retry: { factor: 1, minTimeout: 0 },
+        telemetry: {
+          get correlationId() {
+            return getCorrelationId();
+          },
+          trackException
+        }
+      });
     });
 
-    describe('after iterate once', () => {
-      let iteratorResultPromise: Promise<IteratorResult<Activity>>;
+    describe('When conversation started and bot returned with 1 activity over SSE', () => {
+      let startNewConversationResult: ReturnType<DirectToEngineChatAdapterAPI['startNewConversation']>;
 
-      beforeEach(async () => {
-        httpPostConversation.mockImplementationOnce(
-          () =>
-            new HttpResponse(
-              Buffer.from(`event: activity
+      beforeEach(() => {
+        shouldSetCorrelationId && getCorrelationId.mockImplementation(() => 't-00001');
+        startNewConversationResult = adapter.startNewConversation({ emitStartConversationEvent });
+      });
+
+      describe('after iterate once', () => {
+        let iteratorResultPromise: Promise<IteratorResult<Activity>>;
+
+        beforeEach(async () => {
+          httpPostConversation.mockImplementationOnce(
+            () =>
+              new HttpResponse(
+                Buffer.from(`event: activity
 data: { "from": { "id": "bot" }, "id": "a-00001", "text": "Hello, World!", "type": "message" }
 
 event: end
 data: end
 
 `),
-              { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
-            )
-        );
+                { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
+              )
+          );
+          trackException.mockImplementationOnce(() => {});
 
-        iteratorResultPromise = startNewConversationResult.next();
-        iteratorResultPromise.catch(() => {});
+          iteratorResultPromise = startNewConversationResult.next();
+          await iteratorResultPromise.catch(() => {});
+        });
+
+        describe('should have POST to /conversations', () => {
+          test('once', () => expect(httpPostConversation).toHaveBeenCalledTimes(1));
+          test('with header "Accept" of "application/json"', () =>
+            expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
+        });
+
+        test('should throw "Protocol mismatch" error', () =>
+          expect(iteratorResultPromise).rejects.toThrow('Protocol mismatch'));
+
+        describe('should call trackException', () => {
+          test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
+          test('with arguments', () =>
+            expect(trackException).toHaveBeenNthCalledWith(
+              1,
+              expect.any(Error),
+              expect.objectContaining({
+                handledAt: 'withRetries',
+                retryCount: '5'
+              })
+            ));
+        });
       });
-
-      describe('should have POST to /conversations', () => {
-        test('once', () => expect(httpPostConversation).toHaveBeenCalledTimes(1));
-        test('with header "Accept" of "application/json"', () =>
-          expect(httpPostConversation.mock.calls[0][0].request.headers.get('accept')).toBe('application/json'));
-      });
-
-      test('should throw "Protocol mismatch" error', () =>
-        expect(iteratorResultPromise).rejects.toThrow('Protocol mismatch'));
     });
   });
 });
