@@ -1,4 +1,4 @@
-import type { Observer, Subscription } from 'iter-fest';
+import { type Observer, Subscription } from 'iter-fest';
 
 type Observation<T> = ['complete'] | ['error', unknown] | ['next', T] | ['start', Subscription];
 

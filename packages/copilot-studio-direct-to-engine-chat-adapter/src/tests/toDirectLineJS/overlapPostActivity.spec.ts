@@ -1,11 +1,11 @@
-import type { ConnectionStatus } from 'botframework-directlinejs';
+import { type ConnectionStatus } from 'botframework-directlinejs';
 
-import type { TurnGenerator } from '../../createHalfDuplexChatAdapter';
-import type { JestMockOf } from '../../private/types/JestMockOf';
+import { type TurnGenerator } from '../../createHalfDuplexChatAdapter';
+import { type JestMockOf } from '../../private/types/JestMockOf';
 import promiseWithResolvers, { type PromiseWithResolvers } from '../../private/promiseWithResolvers';
 import toDirectLineJS from '../../toDirectLineJS';
-import type { Activity } from '../../types/Activity';
-import type { DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
+import { type Activity } from '../../types/Activity';
+import { type DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
 
 const END_TURN = Symbol('END_TURN');
 

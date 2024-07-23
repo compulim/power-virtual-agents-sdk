@@ -1,16 +1,16 @@
-import type { ConnectionStatus } from 'botframework-directlinejs';
+import { type ConnectionStatus } from 'botframework-directlinejs';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
 import createHalfDuplexChatAdapter from '../../createHalfDuplexChatAdapter';
 import DeferredQueue from '../../private/DeferredQueue';
-import type { DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
-import type { JestMockOf } from '../../private/types/JestMockOf';
+import { type DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
+import { type JestMockOf } from '../../private/types/JestMockOf';
 import toDirectLineJS from '../../toDirectLineJS';
-import type { Activity } from '../../types/Activity';
-import type { DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
-import type { Strategy } from '../../types/Strategy';
-import type { Telemetry } from '../../types/Telemetry';
+import { type Activity } from '../../types/Activity';
+import { type DirectLineJSBotConnection } from '../../types/DirectLineJSBotConnection';
+import { type Strategy } from '../../types/Strategy';
+import { type Telemetry } from '../../types/Telemetry';
 
 const server = setupServer();
 

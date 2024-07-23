@@ -1,12 +1,12 @@
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
-import type { Activity } from '../../types/Activity';
-import type { Strategy } from '../../types/Strategy';
-import type { Telemetry } from '../../types/Telemetry';
+import { type Activity } from '../../types/Activity';
+import { type Strategy } from '../../types/Strategy';
+import { type Telemetry } from '../../types/Telemetry';
 import DirectToEngineChatAdapterAPI from '../DirectToEngineChatAdapterAPI';
-import type { DefaultHttpResponseResolver } from '../types/DefaultHttpResponseResolver';
-import type { JestMockOf } from '../types/JestMockOf';
+import { type DefaultHttpResponseResolver } from '../types/DefaultHttpResponseResolver';
+import { type JestMockOf } from '../types/JestMockOf';
 
 const server = setupServer();
 

@@ -6,13 +6,13 @@ import createHalfDuplexChatAdapter, {
   type TurnGenerator
 } from '../../createHalfDuplexChatAdapter';
 import asyncGeneratorToArray from '../../private/asyncGeneratorToArray';
-import type { BotResponse } from '../../private/types/BotResponse';
+import { type BotResponse } from '../../private/types/BotResponse';
 import { parseConversationId } from '../../private/types/ConversationId';
-import type { DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
-import type { JestMockOf } from '../../private/types/JestMockOf';
-import type { Activity } from '../../types/Activity';
-import type { Strategy } from '../../types/Strategy';
-import type { Telemetry } from '../../types/Telemetry';
+import { type DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
+import { type JestMockOf } from '../../private/types/JestMockOf';
+import { type Activity } from '../../types/Activity';
+import { type Strategy } from '../../types/Strategy';
+import { type Telemetry } from '../../types/Telemetry';
 
 const server = setupServer();
 

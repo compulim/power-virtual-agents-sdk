@@ -2,10 +2,10 @@ import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 
 import createHalfDuplexChatAdapter, { type TurnGenerator } from '../../createHalfDuplexChatAdapter';
-import type { DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
-import type { JestMockOf } from '../../private/types/JestMockOf';
-import type { Strategy } from '../../types/Strategy';
-import type { Telemetry } from '../../types/Telemetry';
+import { type DefaultHttpResponseResolver } from '../../private/types/DefaultHttpResponseResolver';
+import { type JestMockOf } from '../../private/types/JestMockOf';
+import { type Strategy } from '../../types/Strategy';
+import { type Telemetry } from '../../types/Telemetry';
 
 const server = setupServer();
 
