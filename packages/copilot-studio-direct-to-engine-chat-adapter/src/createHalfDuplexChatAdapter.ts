@@ -23,12 +23,19 @@ type CreateHalfDuplexChatAdapterInit = {
 
 type TurnGenerator = AsyncGenerator<Activity, ExecuteTurnFunction, undefined>;
 
-const createExecuteTurn = (api: HalfDuplexChatAdapterAPI): ExecuteTurnFunction => {
+const createExecuteTurn = (
+  api: HalfDuplexChatAdapterAPI,
+  init: CreateHalfDuplexChatAdapterInit | undefined
+): ExecuteTurnFunction => {
   let obsoleted = false;
 
   return (activity: Activity): TurnGenerator => {
     if (obsoleted) {
-      throw new Error('This executeTurn() function is obsoleted. Please use a new one.');
+      const error = new Error('This executeTurn() function is obsoleted. Please use a new one.');
+
+      init?.telemetry?.trackException(error, { handledAt: 'createHalfDuplexChatAdapter.createExecuteTurn' });
+
+      throw error;
     }
 
     obsoleted = true;
@@ -36,7 +43,7 @@ const createExecuteTurn = (api: HalfDuplexChatAdapterAPI): ExecuteTurnFunction =
     return (async function* () {
       yield* api.executeTurn(activity);
 
-      return createExecuteTurn(api);
+      return createExecuteTurn(api, init);
     })();
   };
 };
@@ -56,7 +63,7 @@ export default function createHalfDuplexChatAdapter(
       locale: init.locale
     });
 
-    return createExecuteTurn(api);
+    return createExecuteTurn(api, init);
   })();
 }
 

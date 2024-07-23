@@ -129,6 +129,8 @@ data: end
             let errorThrown: unknown;
 
             beforeEach(() => {
+              trackException.mockImplementation(() => {});
+
               try {
                 adapter.executeTurn({ from: { id: 'u-00001' }, text: 'Aloha!', type: 'message' });
               } catch (error) {
@@ -142,6 +144,16 @@ data: end
                   throw errorThrown;
                 }
               }).toThrow('Another operation is in progress.'));
+
+            describe('should call trackException', () => {
+              test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
+              test('with arguments', () =>
+                expect(trackException).toHaveBeenNthCalledWith(
+                  1,
+                  expect.any(Error),
+                  expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.executeTurn' })
+                ));
+            });
 
             describe('when complete iterating the first call', () => {
               let activities: Activity[];

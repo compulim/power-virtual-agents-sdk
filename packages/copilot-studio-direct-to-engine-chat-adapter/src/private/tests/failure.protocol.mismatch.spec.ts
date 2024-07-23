@@ -101,7 +101,7 @@ data: end
                 { headers: { 'content-type': 'text/event-stream', 'x-ms-conversationid': 'c-00001' } }
               )
           );
-          trackException.mockImplementationOnce(() => {});
+          trackException.mockImplementation(() => {});
 
           iteratorResultPromise = startNewConversationResult.next();
           await iteratorResultPromise.catch(() => {});
@@ -117,13 +117,21 @@ data: end
           expect(iteratorResultPromise).rejects.toThrow('Protocol mismatch'));
 
         describe('should call trackException', () => {
-          test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
-          test('with arguments', () =>
+          test('twice', () => expect(trackException).toHaveBeenCalledTimes(2));
+
+          test('first with arguments', () =>
             expect(trackException).toHaveBeenNthCalledWith(
               1,
               expect.any(Error),
+              expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.#post' })
+            ));
+
+          test('second with arguments', () =>
+            expect(trackException).toHaveBeenNthCalledWith(
+              2,
+              expect.any(Error),
               expect.objectContaining({
-                handledAt: 'withRetries',
+                handledAt: 'DirectToEngineChatAdapterAPI.withRetries',
                 retryCount: '5'
               })
             ));

@@ -121,7 +121,7 @@ data: end
           ['server closed connection', HttpResponse.error(), { expectedNumCalled: 5 }],
           ['server returned 400', new HttpResponse(undefined, { status: 400 }), { expectedNumCalled: 1 }],
           ['server returned 500', new HttpResponse(undefined, { status: 500 }), { expectedNumCalled: 5 }]
-        ])('when execute turn and %s', (_, response, { expectedNumCalled }) => {
+        ])('when execute turn and %s', (type, response, { expectedNumCalled }) => {
           let generator: TurnGenerator;
 
           beforeEach(() => {
@@ -137,7 +137,7 @@ data: end
 
             beforeEach(async () => {
               httpPostExecute.mockImplementationOnce(() => response);
-              trackException.mockImplementationOnce(() => {});
+              trackException.mockImplementation(() => {});
 
               iteratePromise = generator.next();
 
@@ -151,13 +151,24 @@ data: end
             test('should reject', () => expect(iteratePromise).rejects.toThrow());
 
             describe('should call trackException', () => {
-              test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
-              test('with arguments', () =>
-                expect(trackException).toHaveBeenNthCalledWith(
-                  1,
+              if (type === 'server closed connection') {
+                test(`once`, () => expect(trackException).toHaveBeenCalledTimes(1));
+              } else {
+                test(`twice`, () => expect(trackException).toHaveBeenCalledTimes(2));
+
+                test('first with arguments', () =>
+                  expect(trackException).toHaveBeenNthCalledWith(
+                    1,
+                    expect.any(Error),
+                    expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.#post' })
+                  ));
+              }
+
+              test('last with arguments', () =>
+                expect(trackException).toHaveBeenLastCalledWith(
                   expect.any(Error),
                   expect.objectContaining({
-                    handledAt: 'withRetries',
+                    handledAt: 'DirectToEngineChatAdapterAPI.withRetries',
                     retryCount: '5'
                   })
                 ));

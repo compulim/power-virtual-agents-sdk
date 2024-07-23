@@ -167,6 +167,8 @@ data: end
               let errorThrown: unknown;
 
               beforeEach(async () => {
+                trackException.mockImplementationOnce(() => {});
+
                 try {
                   executeTurn({
                     from: { id: 'u-00001' },
@@ -184,6 +186,19 @@ data: end
                     throw errorThrown;
                   }
                 }).toThrow('This executeTurn() function is obsoleted. Please use a new one.'));
+
+              describe('should call trackException', () => {
+                test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
+
+                test('with arguments', () =>
+                  expect(trackException).toHaveBeenNthCalledWith(
+                    1,
+                    expect.any(Error),
+                    expect.objectContaining({
+                      handledAt: 'createHalfDuplexChatAdapter.createExecuteTurn'
+                    })
+                  ));
+              });
             });
           });
         });

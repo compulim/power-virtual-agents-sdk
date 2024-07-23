@@ -127,6 +127,8 @@ data: end
           let errorThrown: unknown;
 
           beforeEach(() => {
+            trackException.mockImplementationOnce(() => {});
+
             try {
               adapter.startNewConversation({ emitStartConversationEvent, locale: undefined });
             } catch (error) {
@@ -153,6 +155,16 @@ data: end
                 { from: { id: 'bot' }, text: 'Hello, World!', type: 'message' },
                 { from: { id: 'bot' }, text: 'Aloha!', type: 'message' }
               ]));
+          });
+
+          describe('should call trackException', () => {
+            test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
+            test('with arguments', () =>
+              expect(trackException).toHaveBeenNthCalledWith(
+                1,
+                expect.any(Error),
+                expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.startNewConversation' })
+              ));
           });
         });
       });

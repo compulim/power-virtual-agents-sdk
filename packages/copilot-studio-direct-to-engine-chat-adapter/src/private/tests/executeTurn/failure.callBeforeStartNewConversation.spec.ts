@@ -63,6 +63,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
         let iteratePromise: Promise<unknown>;
 
         beforeEach(async () => {
+          trackException.mockImplementationOnce(() => {});
           iteratePromise = executeTurnResult.next();
 
           await iteratePromise.catch(() => {});
@@ -70,6 +71,16 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
 
         test('should reject', () =>
           expect(iteratePromise).rejects.toThrow('startNewConversation() must be called before executeTurn().'));
+
+        describe('should call trackException', () => {
+          test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
+          test('with arguments', () =>
+            expect(trackException).toHaveBeenNthCalledWith(
+              1,
+              expect.any(Error),
+              expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.executeTurn' })
+            ));
+        });
       });
     });
   });

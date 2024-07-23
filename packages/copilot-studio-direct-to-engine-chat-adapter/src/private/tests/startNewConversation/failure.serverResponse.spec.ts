@@ -51,7 +51,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
         ['server closed connection', HttpResponse.error(), { expectedNumCalled: 5 }],
         ['server returned 400', new HttpResponse(undefined, { status: 400 }), { expectedNumCalled: 1 }],
         ['server returned 500', new HttpResponse(undefined, { status: 500 }), { expectedNumCalled: 5 }]
-      ])('when conversation started and %s', (_, response, { expectedNumCalled }) => {
+      ])('when conversation started and %s', (type, response, { expectedNumCalled }) => {
         let adapter: DirectToEngineChatAdapterAPI;
         let getCorrelationId: JestMockOf<() => string | undefined>;
         let httpPostConversations: JestMockOf<DefaultHttpResponseResolver>;
@@ -84,7 +84,7 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
 
           beforeEach(async () => {
             httpPostConversations.mockImplementationOnce(() => response);
-            trackException.mockImplementationOnce(() => {});
+            trackException.mockImplementation(() => {});
 
             iteratePromise = startNewConversationResult.next();
 
@@ -98,13 +98,24 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
           test('should reject', () => expect(iteratePromise).rejects.toThrow());
 
           describe('should call trackException', () => {
-            test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
-            test('with arguments', () =>
-              expect(trackException).toHaveBeenNthCalledWith(
-                1,
+            if (type === 'server closed connection') {
+              test(`once`, () => expect(trackException).toHaveBeenCalledTimes(1));
+            } else {
+              test(`twice`, () => expect(trackException).toHaveBeenCalledTimes(2));
+
+              test('first with arguments', () =>
+                expect(trackException).toHaveBeenNthCalledWith(
+                  1,
+                  expect.any(Error),
+                  expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.#post' })
+                ));
+            }
+
+            test('last with arguments', () =>
+              expect(trackException).toHaveBeenLastCalledWith(
                 expect.any(Error),
                 expect.objectContaining({
-                  handledAt: 'withRetries',
+                  handledAt: 'DirectToEngineChatAdapterAPI.withRetries',
                   retryCount: '5'
                 })
               ));

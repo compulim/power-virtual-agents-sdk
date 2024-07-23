@@ -105,6 +105,8 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
 
         describe('wait until 3 connection statuses are observed', () => {
           beforeEach(async () => {
+            trackException.mockImplementation(() => {});
+
             await connectionStatusQueue.promise;
             await connectionStatusQueue.promise;
             await connectionStatusQueue.promise;
@@ -118,13 +120,21 @@ describe.each(['auto' as const, 'rest' as const])('Using "%s" transport', transp
           });
 
           describe('should call trackException', () => {
-            test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
-            test('with arguments', () =>
+            test('twice', () => expect(trackException).toHaveBeenCalledTimes(2));
+
+            test('first with arguments', () =>
               expect(trackException).toHaveBeenNthCalledWith(
                 1,
                 expect.any(Error),
+                expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.#post' })
+              ));
+
+            test('second with arguments', () =>
+              expect(trackException).toHaveBeenNthCalledWith(
+                2,
+                expect.any(Error),
                 expect.objectContaining({
-                  handledAt: 'withRetries',
+                  handledAt: 'DirectToEngineChatAdapterAPI.withRetries',
                   retryCount: '5'
                 })
               ));

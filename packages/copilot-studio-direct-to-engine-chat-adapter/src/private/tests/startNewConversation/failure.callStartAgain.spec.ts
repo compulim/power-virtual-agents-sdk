@@ -150,6 +150,8 @@ data: end
             let iteratePromise: Promise<unknown>;
 
             beforeEach(async () => {
+              trackException.mockImplementationOnce(() => {});
+
               iteratePromise = startNewConversationResult.next();
 
               await iteratePromise.catch(() => {});
@@ -157,6 +159,16 @@ data: end
 
             test('should reject', () =>
               expect(iteratePromise).rejects.toThrow('startNewConversation() cannot be called more than once.'));
+
+            describe('should call trackException', () => {
+              test('once', () => expect(trackException).toHaveBeenCalledTimes(1));
+              test('with arguments', () =>
+                expect(trackException).toHaveBeenNthCalledWith(
+                  1,
+                  expect.any(Error),
+                  expect.objectContaining({ handledAt: 'DirectToEngineChatAdapterAPI.startNewConversation' })
+                ));
+            });
           });
         });
       });
