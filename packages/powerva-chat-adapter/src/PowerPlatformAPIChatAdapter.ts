@@ -66,7 +66,7 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
 
     const response = await this.post<StartResponse>(resolveURLWithQueryAndHash('conversations', baseURL), {
       body: { ...body, emitStartConversationEvent, ...(locale ? { locale } : {}) },
-      headers: { ...headers, ...(correlationId && { 'x-ms-correlationid': correlationId }) },
+      headers: { ...headers, ...(correlationId && { 'x-ms-correlation-id': correlationId }) },
       signal
     });
 
@@ -89,7 +89,7 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
         headers: {
           ...headers,
           'x-ms-conversationid': conversationId,
-          ...(correlationId && { 'x-ms-correlationid': correlationId })
+          ...(correlationId && { 'x-ms-correlation-id': correlationId })
         },
         signal
       }
@@ -113,7 +113,7 @@ export default class PowerPlatformAPIChatAdapter implements TurnBasedChatAdapter
         headers: {
           ...headers,
           'x-ms-conversationid': conversationId,
-          ...(correlationId && { 'x-ms-correlationid': correlationId })
+          ...(correlationId && { 'x-ms-correlation-id': correlationId })
         },
         signal
       }

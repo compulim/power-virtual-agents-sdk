@@ -82,7 +82,7 @@ describe('client with telemetry', () => {
       expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(
         'headers',
         expect.objectContaining({
-          'x-ms-correlationid': '1234',
+          'x-ms-correlation-id': '1234',
           'x-test': 'dummy'
         })
       ));
@@ -185,7 +185,7 @@ describe('client with telemetry', () => {
         'headers',
         expect.objectContaining({
           'Content-Type': 'application/json',
-          'x-ms-correlationid': '1234',
+          'x-ms-correlation-id': '1234',
           'x-test': 'dummy'
         })
       ));
@@ -219,7 +219,7 @@ describe('client with telemetry', () => {
       expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(
         'headers',
         expect.objectContaining({
-          'x-ms-correlationid': '1234',
+          'x-ms-correlation-id': '1234',
           'x-test': 'dummy'
         })
       ));
@@ -243,7 +243,7 @@ describe('client with telemetry', () => {
       expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(
         'headers',
         expect.not.objectContaining({
-          'x-ms-correlationid': expect.anything()
+          'x-ms-correlation-id': expect.anything()
         })
       ));
   });
@@ -259,7 +259,7 @@ describe('client with telemetry', () => {
       expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(
         'headers',
         expect.not.objectContaining({
-          'x-ms-correlationid': expect.anything()
+          'x-ms-correlation-id': expect.anything()
         })
       ));
   });
@@ -275,7 +275,7 @@ describe('client with telemetry', () => {
       expect((globalThis.fetch as MockedFetch).mock.calls[0][1]).toHaveProperty(
         'headers',
         expect.not.objectContaining({
-          'x-ms-correlationid': expect.anything()
+          'x-ms-correlation-id': expect.anything()
         })
       ));
   });
