@@ -24,6 +24,9 @@ export type DirectToEngineChatAdapterAPIInit = {
   telemetry?: Telemetry | undefined;
 };
 
+const CHAT_ADAPTER_HEADER_NAME = 'x-ms-chat-adapter';
+const CONVERSATION_ID_HEADER_NAME = 'x-ms-conversationid';
+const CORRELATION_ID_HEADER_NAME = 'x-ms-correlation-id';
 const DEFAULT_RETRY_COUNT = 4; // Will call 5 times.
 const MAX_CONTINUE_TURN = 999;
 
@@ -140,18 +143,18 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
           async (): Promise<AsyncGenerator<Activity, 'continue' | 'end'>> => {
             const requestHeaders = new Headers(headers);
 
-            this.#conversationId && requestHeaders.set('x-ms-conversationid', this.#conversationId);
+            this.#conversationId && requestHeaders.set(CONVERSATION_ID_HEADER_NAME, this.#conversationId);
             requestHeaders.set(
               'accept',
               transport === 'rest' ? 'application/json' : 'text/event-stream,application/json;q=0.9'
             );
             requestHeaders.set('content-type', 'application/json');
             requestHeaders.set(
-              'x-ms-chat-adapter',
+              CHAT_ADAPTER_HEADER_NAME,
               new URLSearchParams([['version', process.env.npm_package_version]] satisfies string[][]).toString()
             );
             const correlationId = this.#telemetry?.correlationId;
-            correlationId && requestHeaders.set('x-ms-correlation-id', correlationId);
+            correlationId && requestHeaders.set(CORRELATION_ID_HEADER_NAME, correlationId);
 
             currentResponse = await fetch(
               resolveURLWithQueryAndHash(baseURL, 'conversations', this.#conversationId, isContinueTurn && 'continue'),
@@ -176,13 +179,13 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
               const botResponse = parseBotResponse(await currentResponse.json());
 
               if (!this.#conversationId) {
-                const conversationIdInResponse = currentResponse.headers.has('x-ms-conversationid')
-                  ? (currentResponse.headers.get('x-ms-conversation-id') as ConversationId)
+                const conversationIdInResponse = currentResponse.headers.has(CONVERSATION_ID_HEADER_NAME)
+                  ? (currentResponse.headers.get(CONVERSATION_ID_HEADER_NAME) as ConversationId)
                   : botResponse.conversationId;
 
                 if (!conversationIdInResponse) {
                   const error = new Error(
-                    'HTTP REST response from start new conversation must have "x-ms-conversationid" in the header or "conversationId" in the body.'
+                    `HTTP REST response from start new conversation must have "${CONVERSATION_ID_HEADER_NAME}" in the header or "conversationId" in the body.`
                   );
 
                   this.#telemetry?.trackException(error, { handledAt: 'DirectToEngineChatAdapterAPI.#post' });
@@ -212,11 +215,11 @@ export default class DirectToEngineChatAdapterAPI implements HalfDuplexChatAdapt
               }
 
               if (!this.#conversationId) {
-                const conversationId = currentResponse.headers.get('x-ms-conversationid');
+                const conversationId = currentResponse.headers.get(CONVERSATION_ID_HEADER_NAME);
 
                 if (!conversationId) {
                   const error = new Error(
-                    'HTTP SSE response from start new conversation must have "x-ms-conversationid" in the header.'
+                    `HTTP SSE response from start new conversation must have "${CONVERSATION_ID_HEADER_NAME}" in the header.`
                   );
 
                   this.#telemetry?.trackException(error, { handledAt: 'DirectToEngineChatAdapterAPI.#post' });
