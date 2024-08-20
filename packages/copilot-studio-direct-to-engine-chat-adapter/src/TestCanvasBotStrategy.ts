@@ -1,51 +1,61 @@
 import {
-  UUID_REGEX,
-  never,
+  function_,
+  instance,
+  literal,
   object,
   optional,
-  regex,
-  special,
+  parse,
+  pipe,
   string,
+  transform,
   union,
-  value,
-  type Output,
-  type SpecialSchema,
-  type StringSchema
+  type InferOutput
 } from 'valibot';
 
 import { type Strategy } from './types/Strategy';
 import { type Transport } from './types/Transport';
 
-const TestCanvasBotStrategyInitSchema = () =>
-  object(
-    {
-      botId: string([regex(UUID_REGEX)]),
-      environmentId: string([regex(UUID_REGEX)]),
-      getDeltaToken: optional(special(input => typeof input === 'function') as SpecialSchema<() => string | undefined>),
-      getToken: special(input => typeof input === 'function') as SpecialSchema<() => Promise<string>>,
-      islandURI: special(input => input instanceof URL) as SpecialSchema<URL>,
-      transport: union([
-        string([value('auto')]) as StringSchema<'auto'>,
-        string([value('rest')]) as StringSchema<'rest'>
-      ])
-    },
-    never()
-  );
+type DeltaToken = InferOutput<typeof deltaTokenSchema>;
+type TestCanvasBotStrategyInit = Readonly<InferOutput<typeof testCanvasBotStrategyInitSchema>>;
+type Token = InferOutput<typeof tokenSchema>;
 
-type TestCanvasBotStrategyInit = Output<ReturnType<typeof TestCanvasBotStrategyInitSchema>>;
+const deltaTokenSchema = optional(string('getDeltaToken must return string or undefined'));
+const testCanvasBotStrategyInitSchema = object({
+  botId: string('botId must be a string'),
+  environmentId: string('environmentId must be a string'),
+  getDeltaToken: optional(
+    pipe(
+      function_('getDeltaToken must be a function'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      transform<() => any, () => Promise<DeltaToken>>(input => input)
+    )
+  ),
+  getToken: pipe(
+    function_('getToken must be a function'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transform<() => any, () => Promise<Token>>(input => input)
+  ),
+  islandURI: instance(URL, 'islandURI must be instance of URL'),
+  transport: union([literal('auto'), literal('rest')], 'transport must be either "auto" or "rest"')
+});
+const tokenSchema = string('getToken must return a string');
 
 export default class TestCanvasBotStrategy implements Strategy {
-  constructor({ botId, islandURI, environmentId, getDeltaToken, getToken, transport }: TestCanvasBotStrategyInit) {
-    this.#getToken = getToken;
+  constructor(init: TestCanvasBotStrategyInit) {
+    const { botId, islandURI, environmentId, getDeltaToken, getToken, transport } = parse(
+      testCanvasBotStrategyInitSchema,
+      init
+    );
 
     this.#baseURL = new URL(`/environments/${encodeURI(environmentId)}/bots/${encodeURI(botId)}/test/`, islandURI);
-    this.#getDeltaToken = getDeltaToken;
+    this.#getDeltaToken = async () => parse(deltaTokenSchema, await getDeltaToken?.());
+    this.#getToken = async () => parse(tokenSchema, await getToken());
     this.#transport = transport;
   }
 
   #baseURL: URL;
-  #getDeltaToken: (() => string | undefined) | undefined;
-  #getToken: () => Promise<string>;
+  #getDeltaToken: () => Promise<DeltaToken>;
+  #getToken: () => Promise<Token>;
   #transport: Transport;
 
   async #getHeaders() {
@@ -53,20 +63,26 @@ export default class TestCanvasBotStrategy implements Strategy {
   }
 
   public async prepareExecuteTurn(): ReturnType<Strategy['prepareExecuteTurn']> {
+    const deltaToken = await this.#getDeltaToken();
+
     return {
       baseURL: this.#baseURL,
-      body: { deltaToken: this.#getDeltaToken?.() },
+      body: deltaToken ? { deltaToken } : undefined,
       headers: await this.#getHeaders(),
       transport: this.#transport
     };
   }
 
   public async prepareStartNewConversation(): ReturnType<Strategy['prepareStartNewConversation']> {
+    const deltaToken = await this.#getDeltaToken();
+
     return {
       baseURL: this.#baseURL,
-      body: { deltaToken: this.#getDeltaToken?.() },
+      body: deltaToken ? { deltaToken } : undefined,
       headers: await this.#getHeaders(),
       transport: this.#transport
     };
   }
 }
+
+export type { TestCanvasBotStrategyInit };

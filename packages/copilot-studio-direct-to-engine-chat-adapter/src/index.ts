@@ -1,6 +1,7 @@
-import PrebuiltBotStrategy from './PrebuiltBotStrategy';
-import PublishedBotStrategy from './PublishedBotStrategy';
-import TestCanvasBotStrategy from './TestCanvasBotStrategy';
+import EmbeddedAuthoringBotStrategy, { type EmbeddedAuthoringBotStrategyInit } from './EmbeddedAuthoringBotStrategy';
+import PrebuiltBotStrategy, { type PrebuiltBotStrategyInit } from './PrebuiltBotStrategy';
+import PublishedBotStrategy, { type PublishedBotStrategyInit } from './PublishedBotStrategy';
+import TestCanvasBotStrategy, { type TestCanvasBotStrategyInit } from './TestCanvasBotStrategy';
 import createHalfDuplexChatAdapter, {
   type CreateHalfDuplexChatAdapterInit,
   type ExecuteTurnFunction,
@@ -19,10 +20,11 @@ declare global {
 }
 
 export {
+  createHalfDuplexChatAdapter,
+  EmbeddedAuthoringBotStrategy,
   PrebuiltBotStrategy,
   PublishedBotStrategy,
   TestCanvasBotStrategy,
-  createHalfDuplexChatAdapter,
   toDirectLineJS
 };
 
@@ -31,10 +33,14 @@ export type {
   Attachment,
   CreateHalfDuplexChatAdapterInit,
   DirectLineJSBotConnection,
+  EmbeddedAuthoringBotStrategyInit,
   ExecuteTurnFunction,
+  PrebuiltBotStrategyInit,
+  PublishedBotStrategyInit,
   Strategy,
   StrategyRequestInit,
   Telemetry,
+  TestCanvasBotStrategyInit,
   Transport,
   TurnGenerator
 };

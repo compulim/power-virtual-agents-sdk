@@ -1,41 +1,30 @@
-import {
-  UUID_REGEX,
-  never,
-  object,
-  regex,
-  special,
-  string,
-  union,
-  value,
-  type Output,
-  type SpecialSchema,
-  type StringSchema
-} from 'valibot';
+import { function_, instance, literal, object, parse, pipe, string, transform, union, type InferOutput } from 'valibot';
 
 import { type Strategy } from './types/Strategy';
 import { type Transport } from './types/Transport';
 
-const PrebuiltBotStrategyInitSchema = () =>
-  object(
-    {
-      botIdentifier: string([regex(UUID_REGEX)]),
-      environmentEndpointURL: special(input => input instanceof URL) as SpecialSchema<URL>,
-      getToken: special(input => typeof input === 'function') as SpecialSchema<() => Promise<string>>,
-      transport: union([
-        string([value('auto')]) as StringSchema<'auto'>,
-        string([value('rest')]) as StringSchema<'rest'>
-      ])
-    },
-    never()
-  );
+type PrebuiltBotStrategyInit = Readonly<InferOutput<typeof prebuiltBotStrategyInitSchema>>;
+type Token = InferOutput<typeof tokenSchema>;
 
-type PrebuiltBotStrategyInit = Output<ReturnType<typeof PrebuiltBotStrategyInitSchema>>;
+const prebuiltBotStrategyInitSchema = object({
+  botIdentifier: string('botIdentifier must be a string'),
+  environmentEndpointURL: instance(URL, 'environmentEndpointURL must be instance of URL'),
+  getToken: pipe(
+    function_('getToken must be a function'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    transform<() => any, () => Promise<Token>>(input => input)
+  ),
+  transport: union([literal('auto'), literal('rest')], 'transport must be either "auto" or "rest"')
+});
+const tokenSchema = string('getToken must return a string');
 
 const API_VERSION = '2022-03-01-preview';
 
 export default class PublishedBotStrategy implements Strategy {
-  constructor({ botIdentifier, environmentEndpointURL, getToken, transport }: PrebuiltBotStrategyInit) {
-    this.#getToken = getToken;
+  constructor(init: PrebuiltBotStrategyInit) {
+    const { botIdentifier, environmentEndpointURL, getToken, transport } = parse(prebuiltBotStrategyInitSchema, init);
+
+    this.#getToken = async () => parse(tokenSchema, await getToken());
     this.#transport = transport;
 
     const url = new URL(`/powervirtualagents/prebuilt/authenticated/bots/${botIdentifier}/`, environmentEndpointURL);
@@ -46,7 +35,7 @@ export default class PublishedBotStrategy implements Strategy {
   }
 
   #baseURL: URL;
-  #getToken: () => Promise<string>;
+  #getToken: () => Promise<Token>;
   #transport: Transport;
 
   async #getHeaders() {
@@ -61,3 +50,5 @@ export default class PublishedBotStrategy implements Strategy {
     return { baseURL: this.#baseURL, headers: await this.#getHeaders(), transport: this.#transport };
   }
 }
+
+export type { PrebuiltBotStrategyInit };
