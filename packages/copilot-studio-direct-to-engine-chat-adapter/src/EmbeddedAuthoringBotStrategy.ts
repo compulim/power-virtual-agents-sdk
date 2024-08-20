@@ -54,7 +54,7 @@ export default class EmbeddedAuthoringBotStrategy implements Strategy {
     const deltaToken = await this.#getDeltaToken();
 
     return {
-      baseURL: new URL('execute/?api-version=1', this.#baseURL),
+      baseURL: new URL('execute?api-version=1', this.#baseURL),
       body: deltaToken ? { deltaToken } : undefined,
       headers: new Headers({ authorization: `Bearer ${await this.#getToken()}` })
     };

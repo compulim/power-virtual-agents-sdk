@@ -58,7 +58,7 @@ describe.each([['with deltaToken' as const], ['without deltaToken' as const]])('
     test('request should set baseURL properly', () =>
       expect(request).toHaveProperty(
         'baseURL.href',
-        'https://aka.ms/copilotstudio/embedded-authoring/authenticated/bots/bot-schema/execute/?api-version=1'
+        'https://aka.ms/copilotstudio/embedded-authoring/authenticated/bots/bot-schema/execute?api-version=1'
       ));
 
     test('request should set headers properly', () =>
