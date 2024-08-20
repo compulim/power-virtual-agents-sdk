@@ -30,7 +30,10 @@ export default memo(function WebChat({
 }: Props) {
   const deltaTokenRef = useRefFrom(deltaToken);
   const tokenRef = useRefFrom(token);
-  const getDeltaToken = useCallback<() => string | undefined>(() => deltaTokenRef.current, [deltaTokenRef]);
+  const getDeltaToken = useCallback<() => Promise<string | undefined>>(
+    () => Promise.resolve(deltaTokenRef.current),
+    [deltaTokenRef]
+  );
   const getToken = useCallback<() => Promise<string>>(() => Promise.resolve(tokenRef.current), [tokenRef]);
 
   const strategy = useMemo(
