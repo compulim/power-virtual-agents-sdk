@@ -9,6 +9,7 @@ import WebChatViaEmbeddedAuthoringTestBot from './WebChatViaEmbeddedAuthoringTes
 import WebChatViaPrebuiltBot from './WebChatViaPrebuiltBot';
 import WebChatViaPublishedBot from './WebChatViaPublishedBot';
 import WebChatViaTestCanvasBot from './WebChatViaTestCanvasBot';
+import WebChatViaThirdPartyPublishedBot from './WebChatViaThirdPartyPublishedBot';
 
 type SubmittedCredential = {
   baseURL?: string;
@@ -184,6 +185,18 @@ export default memo(function App() {
           : type === 'published bot'
           ? submittedCredential.botSchema && (
               <WebChatViaPublishedBot
+                botSchema={submittedCredential.botSchema}
+                emitStartConversationEvent={emitStartConversationEvent}
+                environmentID={submittedCredential.environmentID}
+                hostnameSuffix={submittedCredential.hostnameSuffix}
+                key={submittedCredential.key}
+                token={submittedCredential.token}
+                transport={submittedCredential.transport}
+              />
+            )
+          : type === 'third party published bot'
+          ? submittedCredential.botSchema && (
+              <WebChatViaThirdPartyPublishedBot
                 botSchema={submittedCredential.botSchema}
                 emitStartConversationEvent={emitStartConversationEvent}
                 environmentID={submittedCredential.environmentID}

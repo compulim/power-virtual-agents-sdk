@@ -2,6 +2,9 @@ import EmbeddedAuthoringBotStrategy, { type EmbeddedAuthoringBotStrategyInit } f
 import PrebuiltBotStrategy, { type PrebuiltBotStrategyInit } from './PrebuiltBotStrategy';
 import PublishedBotStrategy, { type PublishedBotStrategyInit } from './PublishedBotStrategy';
 import TestCanvasBotStrategy, { type TestCanvasBotStrategyInit } from './TestCanvasBotStrategy';
+import ThirdPartyPublishedBotStrategy, {
+  type ThirdPartyPublishedBotStrategyInit
+} from './ThirdPartyPublishedBotStrategy';
 import createHalfDuplexChatAdapter, {
   type CreateHalfDuplexChatAdapterInit,
   type ExecuteTurnFunction,
@@ -25,6 +28,7 @@ export {
   PrebuiltBotStrategy,
   PublishedBotStrategy,
   TestCanvasBotStrategy,
+  ThirdPartyPublishedBotStrategy,
   toDirectLineJS
 };
 
@@ -41,6 +45,7 @@ export type {
   StrategyRequestInit,
   Telemetry,
   TestCanvasBotStrategyInit,
+  ThirdPartyPublishedBotStrategyInit,
   Transport,
   TurnGenerator
 };

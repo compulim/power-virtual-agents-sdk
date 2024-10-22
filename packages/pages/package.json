@@ -22,7 +22,7 @@
     "postinstall:p-defer-es5": "cd .. && cd .. && cd node_modules && cd p-defer-es5 && npm run postinstall",
     "precommit": "eslint .",
     "start": "concurrently --kill-others \"npm run start:*\"",
-    "start:esbuild": "npm run build:esbuild -- --servedir=./public",
+    "start:esbuild": "npm run build:esbuild -- --define:IS_DEVELOPMENT=true --servedir=./public --watch",
     "start:typescript": "npm run build:typescript -- --watch"
   },
   "dependencies": {

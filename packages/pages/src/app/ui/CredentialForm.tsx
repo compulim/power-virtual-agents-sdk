@@ -88,7 +88,8 @@ export default memo(function CredentialForm({
       const type: BotType =
         typeRef.current === 'embedded authoring test bot' ||
         typeRef.current === 'published bot' ||
-        typeRef.current === 'test canvas bot'
+        typeRef.current === 'test canvas bot' ||
+        typeRef.current === 'third party published bot'
           ? typeRef.current
           : 'prebuilt bot';
 
@@ -184,7 +185,10 @@ export default memo(function CredentialForm({
     ({ currentTarget: { value } }) =>
       dispatchChange({
         type:
-          value === 'embedded authoring test bot' || value === 'published bot' || value === 'test canvas bot'
+          value === 'embedded authoring test bot' ||
+          value === 'published bot' ||
+          value === 'test canvas bot' ||
+          value === 'third party published bot'
             ? value
             : 'prebuilt bot'
       }),
@@ -219,7 +223,12 @@ export default memo(function CredentialForm({
         <dd>
           <label>
             <input
-              checked={type !== 'embedded authoring test bot' && type !== 'published bot' && type !== 'test canvas bot'}
+              checked={
+                type !== 'embedded authoring test bot' &&
+                type !== 'published bot' &&
+                type !== 'test canvas bot' &&
+                type !== 'third party published bot'
+              }
               name="bot-type"
               onChange={handleTypeChange}
               type="radio"
@@ -237,7 +246,19 @@ export default memo(function CredentialForm({
               type="radio"
               value="published bot"
             />
-            Published bot
+            Published bot (1P)
+          </label>
+        </dd>
+        <dd>
+          <label>
+            <input
+              checked={type === 'third party published bot'}
+              name="bot-type"
+              onChange={handleTypeChange}
+              type="radio"
+              value="third party published bot"
+            />
+            Published bot (3P)
           </label>
         </dd>
         <dd>
@@ -333,7 +354,7 @@ export default memo(function CredentialForm({
             </dd>
           </label>
         )}
-        {type === 'embedded authoring test bot' || type === 'published bot' ? (
+        {type === 'embedded authoring test bot' || type === 'published bot' || type === 'third party published bot' ? (
           <label>
             <dt>Bot schema</dt>
             <dd>
