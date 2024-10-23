@@ -21,5 +21,18 @@ export default defineConfig([
     entry: { 'copilot-studio-direct-to-engine-chat-adapter.bundle': './src/index.ts' },
     noExternal: [/./u],
     minify: true
+  },
+  {
+    ...BASE_CONFIG,
+    dts: false,
+    entry: { 'copilot-studio-direct-to-engine-chat-adapter.development': './src/umd.ts' },
+    format: 'iife'
+  },
+  {
+    ...BASE_CONFIG,
+    dts: false,
+    entry: { 'copilot-studio-direct-to-engine-chat-adapter.production': './src/umd.ts' },
+    format: 'iife',
+    minify: true
   }
 ]);
