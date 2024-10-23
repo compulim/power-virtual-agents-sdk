@@ -25,13 +25,13 @@ export default defineConfig([
   {
     ...BASE_CONFIG,
     dts: false,
-    entry: { 'copilot-studio-direct-to-engine-chat-adapter.development': './src/umd.ts' },
+    entry: { 'copilot-studio-direct-to-engine-chat-adapter.development': './src/index.global.ts' },
     format: 'iife'
   },
   {
     ...BASE_CONFIG,
     dts: false,
-    entry: { 'copilot-studio-direct-to-engine-chat-adapter.production': './src/umd.ts' },
+    entry: { 'copilot-studio-direct-to-engine-chat-adapter.production': './src/index.global.ts' },
     format: 'iife',
     minify: true
   }
