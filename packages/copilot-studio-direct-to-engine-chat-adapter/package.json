@@ -11,8 +11,7 @@
   "files": [
     "/bundle.d.ts",
     "/bundle.js",
-    "/dist/",
-    "/umd/"
+    "/dist/"
   ],
   "main": "./dist/copilot-studio-direct-to-engine-chat-adapter.js",
   "module": "./dist/copilot-studio-direct-to-engine-chat-adapter.mjs",
